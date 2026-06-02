@@ -6,38 +6,41 @@
 
 ![python](https://img.shields.io/badge/python-3.9%2B-blue) ![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-`grokcli` logs in with your **SuperGrok** or **X Premium+** subscription via browser OAuth and talks to the xAI API directly — so a single login unlocks every Grok modality from the command line. It is written in **pure Python standard library**: no `pip` packages to install, nothing to compile.
+`grokcli` logs in with your **SuperGrok** or **X Premium+** subscription via browser OAuth and talks to the xAI API directly — so a single login unlocks every Grok modality from the command line. It is written in **pure Python standard library**: no `pip` packages to install, nothing to compile. It is built, first and foremost, to be driven by AI agents.
 
-```console
-$ grokcli login                     # one-time browser sign-in (no API key)
-$ grokcli chat "Explain entropy in one sentence"
-Entropy is the measure of how many microscopic arrangements correspond to a system's
-macroscopic state — in short, nature's tendency toward disorder.
-$ grokcli image "a red origami fox" -a 16:9
-~/grokcli-output/20260603_..._a_red_origami_fox.png
+## 🤖 Install with your agent (recommended)
+
+This CLI is made for agents, so the easiest way to install it is to let one do it.
+**Copy the prompt below and paste it into Claude Code (or Cursor, Codex, or any coding agent).** The agent fetches the page, installs, and verifies — you do nothing else.
+
+```text
+Install the "grokcli" command-line tool for me. It is a zero-dependency CLI for xAI's
+Grok that authenticates with my SuperGrok / X Premium+ subscription (no API key).
+
+1. Fetch and read https://raw.githubusercontent.com/ele-yufo/grokcli/main/README.md
+   for full context.
+2. Install it (prefer uv; fall back as needed):
+       uv tool install git+https://github.com/ele-yufo/grokcli
+       # or: pipx install git+https://github.com/ele-yufo/grokcli
+       # or: pip  install git+https://github.com/ele-yufo/grokcli
+3. Verify: run `grokcli --version`, then `grokcli help` (it prints the entire manual
+   in one call — read it so you know every command).
+4. Then walk me through `grokcli login` to connect my account, and run `grokcli doctor`
+   to confirm it works.
 ```
 
-## Why grokcli
+Once installed, the agent already knows everything: `grokcli help` prints the complete,
+self-contained manual in a single command, and every `grokcli <command> --help` is atomic
+(prerequisites, flags, examples, output format, exit codes) — no external docs required.
 
-- 🔑 **No API key.** Authenticates with your existing SuperGrok / X Premium+ subscription (OAuth 2.0 PKCE) — you don't pay per token.
-- 📦 **Zero dependencies.** Pure Python 3.9+ stdlib. Runs anywhere Python does; no `node_modules`, no Rust toolchain, no `pip install` of third-party packages.
-- 🎛️ **Every modality, one tool.** Chat, X + web search, image generation & editing, text/image/reference-to-video, video extension, TTS, and transcription — all as scriptable commands.
-- 🤖 **Agent-friendly.** Stable exit codes, JSON output mode, and a fully self-contained help system: `grokcli help` prints the entire manual in one call, so an automated agent can learn the tool with no external docs.
-- 🧵 **Resumable chats.** Conversations persist locally (bounded) and continue across runs with `-c`.
+## Manual install
 
-## Install
-
-Pick whichever you have. All of them put a `grokcli` command on your `PATH`.
+If you'd rather install it yourself, pick whichever you have — all put a `grokcli` command on your `PATH`:
 
 ```bash
-# Recommended — isolated, modern, fast:
-uv tool install git+https://github.com/ele-yufo/grokcli
-
-# Or with pipx:
-pipx install git+https://github.com/ele-yufo/grokcli
-
-# Or plain pip (consider a virtualenv):
-pip install git+https://github.com/ele-yufo/grokcli
+uv tool install git+https://github.com/ele-yufo/grokcli      # recommended (isolated, fast)
+pipx install     git+https://github.com/ele-yufo/grokcli      # or pipx
+pip install      git+https://github.com/ele-yufo/grokcli      # or pip (use a virtualenv)
 ```
 
 <details>
@@ -58,18 +61,24 @@ grokcli doctor         # checks auth, connectivity, and entitlement
 
 > Requires Python 3.9+ and an active **SuperGrok** or **X Premium+** subscription.
 
-## For AI agents
+## In action
 
-To install and master this CLI **autonomously, with no prior context**, run:
+```console
+$ grokcli chat "Explain entropy in one sentence"
+Entropy measures how many microscopic arrangements match a system's macroscopic
+state — in short, nature's tendency toward disorder.
 
-```bash
-uv tool install git+https://github.com/ele-yufo/grokcli   # or: pipx install git+https://github.com/ele-yufo/grokcli
-grokcli help                                              # prints the ENTIRE manual in one call
-grokcli login --manual-paste                              # OAuth; paste the callback URL back (headless-safe)
-grokcli doctor                                            # confirm everything works
+$ grokcli image "a red origami fox" -a 16:9
+~/grokcli-output/20260603_..._a_red_origami_fox.png
 ```
 
-`grokcli help` (and every command's `--help`) is **atomic and self-contained** — it documents the auth prerequisite, all commands, flags, examples, output format, and exit codes. Read it and you know the whole tool; no other documentation is needed.
+## Why grokcli
+
+- 🔑 **No API key.** Authenticates with your existing SuperGrok / X Premium+ subscription (OAuth 2.0 PKCE) — you don't pay per token.
+- 📦 **Zero dependencies.** Pure Python 3.9+ stdlib. Runs anywhere Python does; no `node_modules`, no Rust toolchain, no third-party `pip` packages.
+- 🎛️ **Every modality, one tool.** Chat, X + web search, image generation & editing, text/image/reference-to-video, video extension, TTS, and transcription — all as scriptable commands.
+- 🤖 **Agent-native.** Stable exit codes, JSON output mode, and a fully self-contained help system (`grokcli help` = the whole manual in one call).
+- 🧵 **Resumable chats.** Conversations persist locally (bounded) and continue across runs with `-c`.
 
 ## Commands
 
@@ -139,9 +148,8 @@ grokcli config set output_dir ~/Pictures/grok
 ```
 
 Generated media is written to `~/grokcli-output/`. Saved chat sessions live in
-`~/.config/grokcli/sessions/` and are bounded automatically (most-recent messages
-per session and most-recent sessions overall; tune with `GROKCLI_MAX_SESSION_MESSAGES`
-and `GROKCLI_MAX_SESSIONS`).
+`~/.config/grokcli/sessions/` and are bounded automatically (tune with
+`GROKCLI_MAX_SESSION_MESSAGES` and `GROKCLI_MAX_SESSIONS`).
 
 ## How it works
 
@@ -154,7 +162,7 @@ it is only ever sent to `*.x.ai`.
 ## Development
 
 ```bash
-make test     # 302 stdlib unittest cases; no test dependencies
+make test     # stdlib unittest suite; no test dependencies
 ```
 
 Tests live next to the modules they cover (`grokcli/**/test_*.py`).

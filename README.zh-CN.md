@@ -6,37 +6,40 @@
 
 ![python](https://img.shields.io/badge/python-3.9%2B-blue) ![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-`grokcli` 通过浏览器 OAuth 用你的 **SuperGrok** 或 **X Premium+** 订阅登录,直连 xAI API —— 一次登录即可在命令行使用 Grok 的全部能力。它用**纯 Python 标准库**编写:不装任何 `pip` 包,不用编译。
+`grokcli` 通过浏览器 OAuth 用你的 **SuperGrok** 或 **X Premium+** 订阅登录,直连 xAI API —— 一次登录即可在命令行使用 Grok 的全部能力。它用**纯 Python 标准库**编写:不装任何 `pip` 包,不用编译。它首要的设计目标,就是被 AI Agent 驱动。
 
-```console
-$ grokcli login                     # 一次性浏览器登录(无需 API key)
-$ grokcli chat "用一句话解释熵"
-熵衡量一个系统的宏观状态对应多少种微观排列方式 —— 简单说,就是自然走向无序的倾向。
-$ grokcli image "一只红色的折纸狐狸" -a 16:9
-~/grokcli-output/20260603_..._a_red_origami_fox.png
+## 🤖 让你的 Agent 来装(推荐)
+
+这个 CLI 是为 Agent 准备的,所以最省事的安装方式就是交给 Agent。
+**复制下面这段 prompt,粘贴到 Claude Code(或 Cursor、Codex 等任意编码 Agent)里。** Agent 会自己抓取页面、安装并验证 —— 你什么都不用做。
+
+```text
+帮我安装 "grokcli" 命令行工具。它是一个零依赖的 xAI Grok CLI,用我的
+SuperGrok / X Premium+ 订阅登录(不需要 API key)。
+
+1. 抓取并阅读 https://raw.githubusercontent.com/ele-yufo/grokcli/main/README.md
+   获取完整说明。
+2. 安装(优先用 uv,不行再退而求其次):
+       uv tool install git+https://github.com/ele-yufo/grokcli
+       # 或: pipx install git+https://github.com/ele-yufo/grokcli
+       # 或: pip  install git+https://github.com/ele-yufo/grokcli
+3. 验证:运行 `grokcli --version`,再运行 `grokcli help`(它一条命令打印完整手册
+   —— 读一遍你就知道所有命令了)。
+4. 然后带我走一遍 `grokcli login` 连接我的账号,并运行 `grokcli doctor` 确认可用。
 ```
 
-## 为什么用 grokcli
+装好后 Agent 就全懂了:`grokcli help` 一条命令打印**完整、自包含**的手册,每个
+`grokcli <命令> --help` 也都是原子化的(前置条件、参数、示例、输出格式、退出码)——
+不需要任何外部文档。
 
-- 🔑 **不需要 API key。** 用你已有的 SuperGrok / X Premium+ 订阅登录(OAuth 2.0 PKCE),不按 token 付费。
-- 📦 **零依赖。** 纯 Python 3.9+ 标准库。有 Python 的地方就能跑;不要 `node_modules`、不要 Rust 工具链、不 `pip install` 任何第三方包。
-- 🎛️ **一个工具,所有模态。** 对话、X + 网页搜索、图片生成与编辑、文/图/参考生成视频、视频延长、TTS、语音转写 —— 全是可脚本化的命令。
-- 🤖 **对 Agent 友好。** 稳定的退出码、JSON 输出模式,以及完全自包含的帮助系统:`grokcli help` 一条命令打印**完整手册**,Agent 无需任何外部文档即可掌握。
-- 🧵 **可续接对话。** 会话本地持久化(有上限),用 `-c` 跨次续接。
+## 手动安装
 
-## 安装
-
-任选一种,都会把 `grokcli` 命令装到你的 `PATH` 上。
+如果你想自己装,任选一种(都会把 `grokcli` 装到 `PATH` 上):
 
 ```bash
-# 推荐 —— 隔离、现代、快:
-uv tool install git+https://github.com/ele-yufo/grokcli
-
-# 或用 pipx:
-pipx install git+https://github.com/ele-yufo/grokcli
-
-# 或普通 pip(建议在 virtualenv 中):
-pip install git+https://github.com/ele-yufo/grokcli
+uv tool install git+https://github.com/ele-yufo/grokcli      # 推荐(隔离、快)
+pipx install     git+https://github.com/ele-yufo/grokcli      # 或 pipx
+pip install      git+https://github.com/ele-yufo/grokcli      # 或 pip(建议在 virtualenv 中)
 ```
 
 <details>
@@ -57,18 +60,23 @@ grokcli doctor         # 检查认证、连通性与订阅权限
 
 > 需要 Python 3.9+ 和有效的 **SuperGrok** 或 **X Premium+** 订阅。
 
-## 给 AI Agent 的安装指令
+## 实际效果
 
-让 Agent **零上下文、全自动**地安装并掌握本 CLI,执行:
+```console
+$ grokcli chat "用一句话解释熵"
+熵衡量一个系统的宏观状态对应多少种微观排列方式 —— 简单说,就是自然走向无序的倾向。
 
-```bash
-uv tool install git+https://github.com/ele-yufo/grokcli   # 或: pipx install git+https://github.com/ele-yufo/grokcli
-grokcli help                                              # 一条命令打印完整手册
-grokcli login --manual-paste                              # OAuth;粘贴回调 URL(适配无浏览器环境)
-grokcli doctor                                            # 确认一切正常
+$ grokcli image "一只红色的折纸狐狸" -a 16:9
+~/grokcli-output/20260603_..._a_red_origami_fox.png
 ```
 
-`grokcli help`(以及每个命令的 `--help`)都是**原子化、自包含**的 —— 它说明了登录前置条件、所有命令、参数、示例、输出格式和退出码。读完它就掌握了整个工具,不需要任何其他文档。
+## 为什么用 grokcli
+
+- 🔑 **不需要 API key。** 用你已有的 SuperGrok / X Premium+ 订阅登录(OAuth 2.0 PKCE),不按 token 付费。
+- 📦 **零依赖。** 纯 Python 3.9+ 标准库。有 Python 的地方就能跑;不要 `node_modules`、不要 Rust 工具链、不装任何第三方 `pip` 包。
+- 🎛️ **一个工具,所有模态。** 对话、X + 网页搜索、图片生成与编辑、文/图/参考生成视频、视频延长、TTS、语音转写 —— 全是可脚本化的命令。
+- 🤖 **原生为 Agent 设计。** 稳定退出码、JSON 输出模式,以及完全自包含的帮助系统(`grokcli help` = 一条命令出完整手册)。
+- 🧵 **可续接对话。** 会话本地持久化(有上限),用 `-c` 跨次续接。
 
 ## 命令
 
@@ -138,8 +146,7 @@ grokcli config set output_dir ~/Pictures/grok
 ```
 
 生成的媒体写入 `~/grokcli-output/`。已存对话位于 `~/.config/grokcli/sessions/`,会自动限制大小
-(每个会话只留最近若干条消息、整体只留最近若干个会话;可用 `GROKCLI_MAX_SESSION_MESSAGES`
-和 `GROKCLI_MAX_SESSIONS` 调整)。
+(可用 `GROKCLI_MAX_SESSION_MESSAGES` 和 `GROKCLI_MAX_SESSIONS` 调整)。
 
 ## 工作原理
 
@@ -151,7 +158,7 @@ grokcli config set output_dir ~/Pictures/grok
 ## 开发
 
 ```bash
-make test     # 302 个标准库 unittest;无测试依赖
+make test     # 标准库 unittest 测试集;无测试依赖
 ```
 
 测试与被测模块同级(`grokcli/**/test_*.py`)。
