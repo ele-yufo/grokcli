@@ -65,7 +65,7 @@ EXAMPLES:
 
 FILES & ENVIRONMENT:
   Credentials  ~/.config/grokcli/auth.json (chmod 600)    Config  ~/.config/grokcli/config.json
-  Sessions     ~/.config/grokcli/sessions/                Output  ~/grokcli-output/
+  Sessions     ~/.config/grokcli/sessions/                Output  ./grokcli-output/
   GROKCLI_HOME overrides the config dir.   NO_COLOR disables color.   HTTPS_PROXY sets a proxy.
 
 Run `grokcli <command> --help` for the full options and examples of any command,
@@ -250,7 +250,7 @@ def _add_media_commands(sub, parent) -> None:
         sub, "image", parent,
         help_text="generate image(s) from a text prompt",
         description=(
-            "Generate one or more images and save them to ~/grokcli-output/ (paths printed\n"
+            "Generate one or more images and save them to ./grokcli-output/ (paths printed\n"
             "to stdout). Aspect ratios: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3. Resolution: 1k or 2k."
         ),
         epilog=(
@@ -271,7 +271,7 @@ def _add_media_commands(sub, parent) -> None:
         help_text="generate a video (text-, image-, or reference-to-video)",
         description=(
             "Generate a video: the job is submitted, polled until ready, then downloaded to\n"
-            "~/grokcli-output/. Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3. Resolution: 480p/720p/1080p\n"
+            "./grokcli-output/. Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3. Resolution: 480p/720p/1080p\n"
             "(1080p is subscription-tier-gated). Duration 1-15s (validated per model, not clamped).\n"
             "  text-to-video (T2V):       just give a prompt          (grok-imagine-video)\n"
             "  image-to-video (I2V):      -i IMAGE  animate a start image (grok-imagine-video-1.5-preview)\n"
@@ -299,7 +299,7 @@ def _add_media_commands(sub, parent) -> None:
         help_text="edit existing image(s) with a prompt",
         description=(
             "Edit 1-3 source images guided by a text prompt (POST /images/edits); the result\n"
-            "is saved to ~/grokcli-output/. Aspect ratio is optional (defaults to the input's,\n"
+            "is saved to ./grokcli-output/. Aspect ratio is optional (defaults to the input's,\n"
             "or 'auto' for multi-image edits). Use `image` instead for text-only generation."
         ),
         epilog=(
@@ -322,7 +322,7 @@ def _add_media_commands(sub, parent) -> None:
         help_text="extend an existing video",
         description=(
             "Extend a video by appending more generated footage (POST /videos/extensions);\n"
-            "submitted, polled, then downloaded to ~/grokcli-output/. The input may be a local\n"
+            "submitted, polled, then downloaded to ./grokcli-output/. The input may be a local\n"
             "video file or an http(s) URL. An optional prompt steers the continuation."
         ),
         epilog=(
@@ -341,7 +341,7 @@ def _add_media_commands(sub, parent) -> None:
         sub, "tts", parent,
         help_text="text-to-speech (save an audio file)",
         description=(
-            "Synthesize speech from text and save it to ~/grokcli-output/ (path printed to\n"
+            "Synthesize speech from text and save it to ./grokcli-output/ (path printed to\n"
             "stdout). List available voice ids with `grokcli voices`."
         ),
         epilog=(

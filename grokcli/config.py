@@ -71,7 +71,15 @@ def sessions_dir(env: Optional[Mapping[str, str]] = None) -> Path:
 
 
 def default_output_dir() -> Path:
-    return Path.home() / "grokcli-output"
+    """Default media output directory: ``grokcli-output`` under the current
+    working directory.
+
+    Resolving against the CWD (rather than ``~``) keeps generated files next to
+    the project an agent or user is working in, so they don't have to be copied
+    back from the home directory afterwards. Override with ``--output-dir``,
+    ``GROKCLI_OUTPUT_DIR``, or the ``output_dir`` config key.
+    """
+    return Path.cwd() / "grokcli-output"
 
 
 def load_config_file(env: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:

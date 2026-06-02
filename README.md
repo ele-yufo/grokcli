@@ -69,7 +69,7 @@ Entropy measures how many microscopic arrangements match a system's macroscopic
 state — in short, nature's tendency toward disorder.
 
 $ grokcli image "a red origami fox" -a 16:9
-~/grokcli-output/20260603_..._a_red_origami_fox.png
+./grokcli-output/20260603_..._a_red_origami_fox.png
 ```
 
 ## Why grokcli
@@ -169,7 +169,8 @@ grokcli config set chat_model grok-4.3
 grokcli config set output_dir ~/Pictures/grok
 ```
 
-Generated media is written to `~/grokcli-output/`. Saved chat sessions live in
+Generated media is written to `./grokcli-output/` (under the current working
+directory). Saved chat sessions live in
 `~/.config/grokcli/sessions/` and are bounded automatically (tune with
 `GROKCLI_MAX_SESSION_MESSAGES` and `GROKCLI_MAX_SESSIONS`).
 
