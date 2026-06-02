@@ -1,6 +1,6 @@
-<!-- Language: **English** | [中文](README.zh-CN.md) -->
-
 # grokcli
+
+**English** · [中文](README.zh-CN.md)
 
 **Your SuperGrok / X Premium+ subscription, as a terminal Swiss-army knife for Grok — chat, search, images, video, speech. No API key. No dependencies.**
 

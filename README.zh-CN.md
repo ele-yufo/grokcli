@@ -1,6 +1,6 @@
-<!-- 语言: [English](README.md) | **中文** -->
-
 # grokcli
+
+[English](README.md) · **中文**
 
 **把你的 SuperGrok / X Premium+ 订阅,变成终端里的 Grok 瑞士军刀 —— 对话、搜索、图片、视频、语音。无需 API key,零依赖。**
 
