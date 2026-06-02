@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grokcli"
+version = "0.1.0"
+description = "Standalone CLI for xAI Grok via SuperGrok / X Premium+ OAuth — zero runtime dependencies"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Fo Yu" }]
+keywords = ["grok", "xai", "cli", "oauth", "supergrok"]
+# Intentionally empty: the entire tool runs on the Python standard library.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ele-yufo/grokcli"
+
+[project.scripts]
+grokcli = "grokcli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["grokcli*"]
+
+[tool.setuptools.package-data]
+grokcli = ["py.typed"]
+
+# Tests live next to the source files (test_*.py) but must not ship in the wheel.
+[tool.setuptools.exclude-package-data]
+"*" = ["test_*.py"]

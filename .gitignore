@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Reference clones (out-of-band, not part of this project)
+_refs/
+
+# grokcli runtime output
+grokcli-output/
+
+# OS
+.DS_Store

@@ -1,0 +1,8 @@
+{
+  "include": ["grokcli"],
+  "exclude": ["**/__pycache__", "_refs"],
+  "extraPaths": ["."],
+  "pythonVersion": "3.9",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning"
+}
