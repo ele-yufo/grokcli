@@ -59,7 +59,12 @@ grokcli search QUERY [--no-web] [--no-x]
 grokcli models                    list available models (GET /v1/models)
 
 grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N] [-m MODEL]
-grokcli video PROMPT [-i IMAGE] [-a ASPECT] [-r 480p|720p] [-d SECONDS] [-m MODEL]
+grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT] [-r 1k|2k] [-n N]
+                                  edit 1-3 source images guided by a prompt
+grokcli video PROMPT [-i IMAGE] [--ref IMG ...] [-a ASPECT] [-r 480p|720p] [-d SECONDS]
+                                  -i = image-to-video; --ref = reference-to-video (R2V, up to 7)
+grokcli video-extend VIDEO [PROMPT] [-d SECONDS]
+                                  extend an existing video (local file or URL)
 grokcli tts TEXT [--voice V] [--language en] [-f mp3] [-m MODEL]
 grokcli voices                    list TTS voices (Ara, Eve, Leo, Rex, ...)
 grokcli transcribe AUDIO [-m MODEL]

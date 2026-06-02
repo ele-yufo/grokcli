@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, List, Mapping, Optional
 
 from .. import models, output
 from ..client import GrokClient
@@ -38,14 +38,21 @@ def generate_video(
     duration: int,
     output_dir: Path,
     image: Optional[str] = None,
+    reference_images: Optional[List[str]] = None,
     on_status: Optional[StatusCallback] = None,
     poll_timeout: float = POLL_TIMEOUT_SECONDS,
 ) -> Path:
-    """Submit a video job, poll to completion, download, and return the path."""
+    """Submit a video job, poll to completion, download, and return the path.
+
+    ``image`` = first frame (image-to-video). ``reference_images`` = style/subject
+    references (reference-to-video, R2V); up to 7. Both encode local files as data URIs.
+    """
     if aspect_ratio not in models.ASPECT_RATIOS:
         raise UsageError(f"Invalid aspect ratio {aspect_ratio!r}.")
     if resolution not in models.VIDEO_RESOLUTIONS:
         raise UsageError(f"Invalid resolution {resolution!r}.", hint=f"Choose from: {', '.join(sorted(models.VIDEO_RESOLUTIONS))}")
+    if reference_images and len(reference_images) > 7:
+        raise UsageError("At most 7 reference images are allowed for reference-to-video.")
     duration = max(models.VIDEO_DURATION_MIN, min(models.VIDEO_DURATION_MAX, duration))
     payload: dict = {
         "model": model,
@@ -56,6 +63,8 @@ def generate_video(
     }
     if image:
         payload["image"] = {"url": files.image_to_data_uri(image)}
+    if reference_images:
+        payload["reference_images"] = [{"image_url": files.image_to_data_uri(p)} for p in reference_images]
     headers = {"x-idempotency-key": uuid.uuid4().hex}
     submit = client.request_json("POST", "/videos/generations", json_body=payload, headers=headers)
     request_id = _request_id(submit)
@@ -63,6 +72,48 @@ def generate_video(
     url = _video_url(result)
     path = files.output_path(output_dir, label=prompt, ext="mp4")
     return client.download(url, path)
+
+
+def extend_video(
+    client: GrokClient,
+    *,
+    video: str,
+    model: str,
+    duration: int,
+    output_dir: Path,
+    prompt: Optional[str] = None,
+    on_status: Optional[StatusCallback] = None,
+    poll_timeout: float = POLL_TIMEOUT_SECONDS,
+) -> Path:
+    """Extend an existing video via ``POST /videos/extensions`` (submit + poll + download).
+
+    ``video`` may be an http(s) URL or a local file (encoded as a data URI).
+    """
+    duration = max(models.VIDEO_DURATION_MIN, min(models.VIDEO_DURATION_MAX, duration))
+    payload: dict = {"model": model, "video": {"url": _video_to_url(video)}, "duration": duration}
+    if prompt:
+        payload["prompt"] = prompt
+    headers = {"x-idempotency-key": uuid.uuid4().hex}
+    submit = client.request_json("POST", "/videos/extensions", json_body=payload, headers=headers)
+    request_id = _request_id(submit)
+    result = _poll(client, request_id, on_status=on_status, poll_timeout=poll_timeout)
+    url = _video_url(result)
+    path = files.output_path(output_dir, label="extended", ext="mp4")
+    return client.download(url, path)
+
+
+def _video_to_url(video: str) -> str:
+    """Return an http(s) URL unchanged; encode a local video file as a data URI."""
+    import base64
+    import mimetypes
+
+    if video.startswith(("http://", "https://", "data:")):
+        return video
+    path = Path(video).expanduser()
+    if not path.is_file():
+        raise UsageError(f"Video not found: {video}", hint="Pass a local video file or an http(s) URL.")
+    mime = mimetypes.guess_type(path.name)[0] or "video/mp4"
+    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
 
 
 def _request_id(submit: Any) -> str:
@@ -121,11 +172,18 @@ def run_video(
     resolution: str = "720p",
     duration: int = 8,
     image: Optional[str] = None,
+    reference_images: Optional[List[str]] = None,
     env: Optional[Mapping[str, str]] = None,
 ) -> int:
-    """CLI entry: generate a video (with progress) and report the saved path."""
+    """CLI entry: generate a video (with progress) and report the saved path.
+
+    With ``image`` (image-to-video) or ``reference_images`` (reference-to-video),
+    the 1.5-preview model is selected automatically unless ``model`` overrides it.
+    """
     if not prompt.strip():
         raise UsageError("Empty prompt.", hint='Provide a description: grokcli video "a wave crashing"')
+    # Image-to-video uses the 1.5-preview model; text-to-video and reference-to-video
+    # (reference_images) both use the base model (the preview model rejects reference_images).
     resolved_model = model or (IMAGE_TO_VIDEO_MODEL if image else settings.video_model)
     client = GrokClient(settings, env=env)
     spinner = output.Spinner("Submitting video job...", enabled=settings.color)
@@ -143,6 +201,40 @@ def run_video(
             resolution=resolution,
             duration=duration,
             image=image,
+            reference_images=reference_images,
+            output_dir=settings.output_dir,
+            on_status=_status,
+        )
+    finally:
+        spinner.stop()
+    output.emit_result(settings.output_format, {"path": str(path)}, str(path))
+    return 0
+
+
+def run_video_extend(
+    settings: Settings,
+    *,
+    video: str,
+    prompt: Optional[str] = None,
+    model: Optional[str] = None,
+    duration: int = 6,
+    env: Optional[Mapping[str, str]] = None,
+) -> int:
+    """CLI entry: extend an existing video and report the saved path."""
+    client = GrokClient(settings, env=env)
+    spinner = output.Spinner("Submitting video extension...", enabled=settings.color)
+    spinner.start()
+
+    def _status(status: str, elapsed: int) -> None:
+        spinner.update(f"Extending video... [{status}] {elapsed}s")
+
+    try:
+        path = extend_video(
+            client,
+            video=video,
+            prompt=prompt,
+            model=model or settings.video_model,
+            duration=duration,
             output_dir=settings.output_dir,
             on_status=_status,
         )

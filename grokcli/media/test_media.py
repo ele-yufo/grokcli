@@ -276,5 +276,98 @@ class ImageValidationTest(unittest.TestCase):
                 )
 
 
+class ImageEditTest(unittest.TestCase):
+    def test_edit_sends_images_and_saves(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "in.png"
+            src.write_bytes(b"\x89PNG\r\n")
+            client = _client(tmp)
+            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+            paths = image.edit_image(
+                client, prompt="make it night", sources=[str(src)], model="grok-imagine-image",
+                aspect_ratio=None, resolution=None, n=1, output_dir=Path(tmp),
+            )
+            self.assertEqual(paths[0].read_bytes(), b"OUT")
+            body = client.request_json.call_args.kwargs["json_body"]
+            self.assertEqual(client.request_json.call_args.args, ("POST", "/images/edits"))
+            self.assertTrue(body["images"][0]["image_url"].startswith("data:image/png;base64,"))
+
+    def test_edit_requires_a_source(self):
+        client = _client("/tmp")
+        with self.assertRaises(UsageError):
+            image.edit_image(client, prompt="x", sources=[], model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+
+    def test_edit_rejects_more_than_three(self):
+        client = _client("/tmp")
+        with self.assertRaises(UsageError):
+            image.edit_image(client, prompt="x", sources=["a", "b", "c", "d"], model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+
+    def test_url_source_passes_through(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(return_value={"data": [{"url": "https://img/e.png"}]})
+            client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+            image.edit_image(client, prompt="x", sources=["https://in/a.png"], model="m", aspect_ratio="auto", resolution=None, n=1, output_dir=Path(tmp))
+            self.assertEqual(client.request_json.call_args.kwargs["json_body"]["images"][0]["image_url"], "https://in/a.png")
+
+
+class VideoReferenceAndExtendTest(unittest.TestCase):
+    def test_reference_images_added_to_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                side_effect=[{"request_id": "r"}, {"status": "done", "video": {"url": "https://v/x.mp4"}}]
+            )
+            client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+            with mock.patch.object(video.files, "image_to_data_uri", side_effect=lambda p: f"data:image/png;base64,{p}"), \
+                    mock.patch.object(video.time, "sleep"):
+                video.generate_video(
+                    client, prompt="p", model="grok-imagine-video-1.5-preview", aspect_ratio="16:9",
+                    resolution="720p", duration=5, output_dir=Path(tmp), reference_images=["a", "b"],
+                )
+            refs = client.request_json.call_args_list[0].kwargs["json_body"]["reference_images"]
+            self.assertEqual([r["image_url"] for r in refs], ["data:image/png;base64,a", "data:image/png;base64,b"])
+
+    def test_too_many_reference_images_rejected(self):
+        client = _client("/tmp")
+        with self.assertRaises(UsageError):
+            video.generate_video(
+                client, prompt="p", model="m", aspect_ratio="16:9", resolution="720p", duration=5,
+                output_dir=Path("/tmp"), reference_images=[str(i) for i in range(8)],
+            )
+
+    def test_video_to_url_http_passthrough(self):
+        self.assertEqual(video._video_to_url("https://v/x.mp4"), "https://v/x.mp4")
+
+    def test_video_to_url_local_data_uri(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            v = Path(tmp) / "c.mp4"
+            v.write_bytes(b"MP4DATA")
+            uri = video._video_to_url(str(v))
+            self.assertTrue(uri.startswith("data:video/mp4;base64,"))
+
+    def test_video_to_url_missing_raises(self):
+        with self.assertRaises(UsageError):
+            video._video_to_url("/no/such/clip.mp4")
+
+    def test_extend_video_submits_and_downloads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                side_effect=[{"request_id": "r"}, {"status": "done", "video": {"url": "https://v/ext.mp4"}}]
+            )
+            client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+            with mock.patch.object(video.time, "sleep"):
+                path = video.extend_video(
+                    client, video="https://v/in.mp4", prompt="more", model="grok-imagine-video",
+                    duration=6, output_dir=Path(tmp),
+                )
+            self.assertEqual(client.request_json.call_args_list[0].args, ("POST", "/videos/extensions"))
+            body = client.request_json.call_args_list[0].kwargs["json_body"]
+            self.assertEqual(body["video"]["url"], "https://v/in.mp4")
+            self.assertEqual(body["prompt"], "more")
+            client.download.assert_called_once_with("https://v/ext.mp4", path)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

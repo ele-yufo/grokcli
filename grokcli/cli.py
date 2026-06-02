@@ -268,25 +268,74 @@ def _add_media_commands(sub, parent) -> None:
 
     video = _sub(
         sub, "video", parent,
-        help_text="generate a video (text- or image-to-video)",
+        help_text="generate a video (text-, image-, or reference-to-video)",
         description=(
             "Generate a video: the job is submitted, polled until ready, then downloaded to\n"
             "~/grokcli-output/. Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3. Resolution: 480p or 720p.\n"
-            "Duration: 1-15s. Pass -i IMAGE to animate an existing image (image-to-video)."
+            "Duration: 1-15s.\n"
+            "  text-to-video (T2V):       just give a prompt          (grok-imagine-video)\n"
+            "  image-to-video (I2V):      -i IMAGE  animate a start image (grok-imagine-video-1.5-preview)\n"
+            "  reference-to-video (R2V):  --ref IMG style/subject refs, up to 7, repeatable (grok-imagine-video)"
         ),
         epilog=(
             "EXAMPLES:\n"
             '  grokcli video "a calm ocean wave at sunset" -d 6 -r 720p\n'
-            '  grokcli video "gently animate this portrait" -i photo.png'
+            '  grokcli video "gently animate this portrait" -i photo.png\n'
+            '  grokcli video "a character in this style, walking" --ref a.png --ref b.png'
         ),
     )
     video.add_argument("prompt", help="video description")
-    video.add_argument("-i", "--image", default=None, help="input image path for image-to-video")
-    video.add_argument("-m", "--model", default=None, help="video model (auto-selects i2v model with -i)")
+    video.add_argument("-i", "--image", default=None, help="starting image for image-to-video (I2V)")
+    video.add_argument("--ref", dest="reference_images", action="append", default=None,
+                       help="reference image for reference-to-video (R2V); repeatable, up to 7")
+    video.add_argument("-m", "--model", default=None, help="video model (auto-selects 1.5-preview with -i/--ref)")
     video.add_argument("-a", "--aspect", default="16:9", help="aspect ratio (default 16:9)")
     video.add_argument("-r", "--resolution", default="720p", help="resolution: 480p or 720p (default 720p)")
     video.add_argument("-d", "--duration", type=int, default=8, help="seconds, 1-15 (default 8)")
     video.set_defaults(func=_cmd_video)
+
+    image_edit = _sub(
+        sub, "image-edit", parent,
+        help_text="edit existing image(s) with a prompt",
+        description=(
+            "Edit 1-3 source images guided by a text prompt (POST /images/edits); the result\n"
+            "is saved to ~/grokcli-output/. Aspect ratio is optional (defaults to the input's,\n"
+            "or 'auto' for multi-image edits). Use `image` instead for text-only generation."
+        ),
+        epilog=(
+            "EXAMPLES:\n"
+            '  grokcli image-edit "make it night, add neon signs" -i street.png\n'
+            '  grokcli image-edit "blend these into one scene" -i a.png -i b.png -a auto'
+        ),
+    )
+    image_edit.add_argument("prompt", help="how to edit the image(s)")
+    image_edit.add_argument("-i", "--image", dest="sources", action="append", default=None,
+                            help="source image (local path or URL); repeatable, up to 3")
+    image_edit.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image)")
+    image_edit.add_argument("-a", "--aspect", default=None, help="aspect ratio (default: follow input / auto)")
+    image_edit.add_argument("-r", "--resolution", default=None, help="resolution: 1k or 2k (default: model default)")
+    image_edit.add_argument("-n", "--count", type=int, default=1, help="number of variations (default 1)")
+    image_edit.set_defaults(func=_cmd_image_edit)
+
+    video_extend = _sub(
+        sub, "video-extend", parent,
+        help_text="extend an existing video",
+        description=(
+            "Extend a video by appending more generated footage (POST /videos/extensions);\n"
+            "submitted, polled, then downloaded to ~/grokcli-output/. The input may be a local\n"
+            "video file or an http(s) URL. An optional prompt steers the continuation."
+        ),
+        epilog=(
+            "EXAMPLES:\n"
+            "  grokcli video-extend clip.mp4\n"
+            '  grokcli video-extend clip.mp4 "the camera pulls back to reveal a city" -d 6'
+        ),
+    )
+    video_extend.add_argument("video", help="path or URL of the video to extend")
+    video_extend.add_argument("prompt", nargs="?", default=None, help="optional continuation prompt")
+    video_extend.add_argument("-m", "--model", default=None, help="video model (default grok-imagine-video)")
+    video_extend.add_argument("-d", "--duration", type=int, default=6, help="seconds to add, 1-15 (default 6)")
+    video_extend.set_defaults(func=_cmd_video_extend)
 
     tts = _sub(
         sub, "tts", parent,
@@ -572,6 +621,29 @@ def _cmd_video(args, settings) -> int:
         resolution=args.resolution,
         duration=args.duration,
         image=args.image,
+        reference_images=args.reference_images,
+    )
+
+
+def _cmd_image_edit(args, settings) -> int:
+    from .media import image
+
+    return image.run_image_edit(
+        settings,
+        prompt=args.prompt,
+        sources=args.sources or [],
+        model=args.model,
+        aspect_ratio=args.aspect,
+        resolution=args.resolution,
+        n=args.count,
+    )
+
+
+def _cmd_video_extend(args, settings) -> int:
+    from .media import video
+
+    return video.run_video_extend(
+        settings, video=args.video, prompt=args.prompt, model=args.model, duration=args.duration
     )
 
 

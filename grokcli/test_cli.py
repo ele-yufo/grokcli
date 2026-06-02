@@ -160,6 +160,24 @@ class MediaDispatchTest(unittest.TestCase):
         kw = run.call_args.kwargs
         self.assertEqual((kw["prompt"], kw["image"], kw["duration"]), ("a wave", "img.png", 6))
 
+    def test_video_r2v_ref_is_repeatable(self):
+        with mock.patch("grokcli.media.video.run_video", return_value=0) as run:
+            cli.main(["video", "in this style", "--ref", "a.png", "--ref", "b.png"])
+        self.assertEqual(run.call_args.kwargs["reference_images"], ["a.png", "b.png"])
+
+    def test_image_edit_dispatch_collects_sources(self):
+        with mock.patch("grokcli.media.image.run_image_edit", return_value=0) as run:
+            cli.main(["image-edit", "make it night", "-i", "a.png", "-i", "b.png", "-a", "auto"])
+        kw = run.call_args.kwargs
+        self.assertEqual(kw["sources"], ["a.png", "b.png"])
+        self.assertEqual(kw["aspect_ratio"], "auto")
+
+    def test_video_extend_dispatch(self):
+        with mock.patch("grokcli.media.video.run_video_extend", return_value=0) as run:
+            cli.main(["video-extend", "clip.mp4", "pull back", "-d", "5"])
+        kw = run.call_args.kwargs
+        self.assertEqual((kw["video"], kw["prompt"], kw["duration"]), ("clip.mp4", "pull back", 5))
+
     def test_tts_dispatch(self):
         with mock.patch("grokcli.media.tts.run_tts", return_value=0) as run:
             cli.main(["tts", "hello", "--voice", "Rex", "--language", "en", "-f", "wav"])
