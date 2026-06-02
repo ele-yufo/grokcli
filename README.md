@@ -80,6 +80,28 @@ $ grokcli image "a red origami fox" -a 16:9
 - 🤖 **Agent-native.** Stable exit codes, JSON output mode, and a fully self-contained help system (`grokcli help` = the whole manual in one call).
 - 🧵 **Resumable chats.** Conversations persist locally (bounded) and continue across runs with `-c`.
 
+## How it compares
+
+`grokcli` occupies one niche on purpose: a **zero-dependency, subscription-auth Grok
+*capability* CLI** — not a coding agent. The honest landscape (stars ≈ 2026-06):
+
+| | **grokcli** | Moore grok-cli | superagent grok-cli | official Grok Build |
+|---|:---:|:---:|:---:|:---:|
+| Stars | new | ~40 | ~3.1k | closed-source |
+| Install | Python · **zero deps** | Rust binary | TypeScript · npm | bundled binary |
+| Auth | **subscription OAuth — no key** | subscription OAuth | API key | subscription (Heavy) |
+| Chat · search | ✅ · ✅ | ✅ · ✅ | ✅ · ✅ | ✅ · — |
+| Image (gen · edit) | ✅ · ✅ | ✅ · ✅ | as a tool | — |
+| Video | ✅ T2V/I2V/R2V/extend | ✅ T2V/I2V/edit/extend | as a tool | — |
+| TTS · ASR | ✅ · ✅ | ✅ · ✅ | — | — |
+| Resumable sessions | ✅ | — | ✅ | ✅ |
+| Coding agent | — | — | ✅ | ✅ |
+
+**Being honest:** the popular tools (superagent, the official Grok Build) are *coding agents* —
+that's where the stars are, and grokcli doesn't compete there by design. Moore's Rust CLI is the
+closest peer; grokcli's edges over it are zero-dependency portability (runs anywhere Python does),
+resumable sessions, reference-to-video, a built-in `doctor`, and agent-native self-documenting help.
+
 ## Commands
 
 ```text

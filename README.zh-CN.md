@@ -78,6 +78,24 @@ $ grokcli image "一只红色的折纸狐狸" -a 16:9
 - 🤖 **原生为 Agent 设计。** 稳定退出码、JSON 输出模式,以及完全自包含的帮助系统(`grokcli help` = 一条命令出完整手册)。
 - 🧵 **可续接对话。** 会话本地持久化(有上限),用 `-c` 跨次续接。
 
+## 横向对比
+
+`grokcli` 刻意只占一个生态位:**零依赖、订阅认证的 Grok *能力* CLI** —— 不是编码 Agent。诚实的格局(star 数 ≈ 2026-06):
+
+| | **grokcli** | Moore grok-cli | superagent grok-cli | 官方 Grok Build |
+|---|:---:|:---:|:---:|:---:|
+| Star | 新 | ~40 | ~3.1k | 闭源 |
+| 安装 | Python · **零依赖** | Rust 二进制 | TypeScript · npm | 打包二进制 |
+| 认证 | **订阅 OAuth — 无需 key** | 订阅 OAuth | API key | 订阅(Heavy) |
+| 对话 · 搜索 | ✅ · ✅ | ✅ · ✅ | ✅ · ✅ | ✅ · — |
+| 图片(生成 · 编辑) | ✅ · ✅ | ✅ · ✅ | 作为工具 | — |
+| 视频 | ✅ T2V/I2V/R2V/延长 | ✅ T2V/I2V/编辑/延长 | 作为工具 | — |
+| TTS · ASR | ✅ · ✅ | ✅ · ✅ | — | — |
+| 可续接会话 | ✅ | — | ✅ | ✅ |
+| 编码 Agent | — | — | ✅ | ✅ |
+
+**诚实地说:** 热门的那几个(superagent、官方 Grok Build)是*编码 Agent* —— star 都在那边,grokcli 按设计不去和它们正面竞争。Moore 的 Rust CLI 是最接近的同类;grokcli 相对它的优势是:零依赖可移植(有 Python 就能跑)、可续接会话、参考生成视频(R2V)、内置 `doctor`、以及 agent 原生的自文档化帮助。
+
 ## 命令
 
 ```text
