@@ -322,7 +322,7 @@ class VideoReferenceAndExtendTest(unittest.TestCase):
             with mock.patch.object(video.files, "image_to_data_uri", side_effect=lambda p: f"data:image/png;base64,{p}"), \
                     mock.patch.object(video.time, "sleep"):
                 video.generate_video(
-                    client, prompt="p", model="grok-imagine-video-1.5-preview", aspect_ratio="16:9",
+                    client, prompt="p", model="grok-imagine-video", aspect_ratio="16:9",
                     resolution="720p", duration=5, output_dir=Path(tmp), reference_images=["a", "b"],
                 )
             refs = client.request_json.call_args_list[0].kwargs["json_body"]["reference_images"]
@@ -332,9 +332,56 @@ class VideoReferenceAndExtendTest(unittest.TestCase):
         client = _client("/tmp")
         with self.assertRaises(UsageError):
             video.generate_video(
-                client, prompt="p", model="m", aspect_ratio="16:9", resolution="720p", duration=5,
+                client, prompt="p", model="grok-imagine-video", aspect_ratio="16:9", resolution="720p", duration=5,
                 output_dir=Path("/tmp"), reference_images=[str(i) for i in range(8)],
             )
+
+
+class VideoPerModelValidationTest(unittest.TestCase):
+    def _gen(self, **over):
+        kw: dict = {
+            "prompt": "p", "model": "grok-imagine-video", "aspect_ratio": "16:9",
+            "resolution": "720p", "duration": 5, "output_dir": Path("/tmp"),
+        }
+        kw.update(over)
+        return video.generate_video(_client("/tmp"), **kw)
+
+    def test_duration_out_of_range_errors_not_clamps(self):
+        with self.assertRaises(UsageError) as ctx:
+            self._gen(duration=20)
+        self.assertIn("out of range", ctx.exception.message)
+
+    def test_reference_images_rejected_on_preview_model(self):
+        with self.assertRaises(UsageError) as ctx:
+            self._gen(model="grok-imagine-video-1.5-preview", reference_images=["a"])
+        self.assertIn("reference-to-video", ctx.exception.message)
+
+    def test_image_rejected_on_base_model(self):
+        with self.assertRaises(UsageError) as ctx:
+            self._gen(model="grok-imagine-video", image="a.png")
+        self.assertIn("image-to-video", ctx.exception.message)
+
+    def test_1080p_allowed_client_side(self):
+        # 1080p is tier-gated by the API, but the client must not block it: validation
+        # passes and we reach the submit call (stubbed), rather than a client UsageError.
+        client = _client("/tmp")
+        client.request_json = mock.Mock(side_effect=RuntimeError("reached-submit"))
+        with self.assertRaises(RuntimeError):
+            video.generate_video(
+                client, prompt="p", model="grok-imagine-video", aspect_ratio="16:9",
+                resolution="1080p", duration=5, output_dir=Path("/tmp"),
+            )
+
+    def test_unknown_resolution_rejected(self):
+        with self.assertRaises(UsageError):
+            self._gen(resolution="4k")
+
+    def test_video_spec_lookup(self):
+        from grokcli import models
+
+        self.assertFalse(models.video_spec("grok-imagine-video-1.5-preview").supports_reference)
+        self.assertTrue(models.video_spec("grok-imagine-video").supports_reference)
+        self.assertTrue(models.video_spec("some-future-model").supports_reference)  # permissive default
 
     def test_video_to_url_http_passthrough(self):
         self.assertEqual(video._video_to_url("https://v/x.mp4"), "https://v/x.mp4")

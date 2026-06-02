@@ -271,8 +271,8 @@ def _add_media_commands(sub, parent) -> None:
         help_text="generate a video (text-, image-, or reference-to-video)",
         description=(
             "Generate a video: the job is submitted, polled until ready, then downloaded to\n"
-            "~/grokcli-output/. Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3. Resolution: 480p or 720p.\n"
-            "Duration: 1-15s.\n"
+            "~/grokcli-output/. Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3. Resolution: 480p/720p/1080p\n"
+            "(1080p is subscription-tier-gated). Duration 1-15s (validated per model, not clamped).\n"
             "  text-to-video (T2V):       just give a prompt          (grok-imagine-video)\n"
             "  image-to-video (I2V):      -i IMAGE  animate a start image (grok-imagine-video-1.5-preview)\n"
             "  reference-to-video (R2V):  --ref IMG style/subject refs, up to 7, repeatable (grok-imagine-video)"
@@ -290,7 +290,7 @@ def _add_media_commands(sub, parent) -> None:
                        help="reference image for reference-to-video (R2V); repeatable, up to 7")
     video.add_argument("-m", "--model", default=None, help="video model (auto-selects 1.5-preview with -i/--ref)")
     video.add_argument("-a", "--aspect", default="16:9", help="aspect ratio (default 16:9)")
-    video.add_argument("-r", "--resolution", default="720p", help="resolution: 480p or 720p (default 720p)")
+    video.add_argument("-r", "--resolution", default="720p", help="480p/720p/1080p (1080p tier-gated; default 720p)")
     video.add_argument("-d", "--duration", type=int, default=8, help="seconds, 1-15 (default 8)")
     video.set_defaults(func=_cmd_video)
 

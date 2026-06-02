@@ -47,13 +47,29 @@ def generate_video(
     ``image`` = first frame (image-to-video). ``reference_images`` = style/subject
     references (reference-to-video, R2V); up to 7. Both encode local files as data URIs.
     """
-    if aspect_ratio not in models.ASPECT_RATIOS:
-        raise UsageError(f"Invalid aspect ratio {aspect_ratio!r}.")
-    if resolution not in models.VIDEO_RESOLUTIONS:
-        raise UsageError(f"Invalid resolution {resolution!r}.", hint=f"Choose from: {', '.join(sorted(models.VIDEO_RESOLUTIONS))}")
+    spec = models.video_spec(model)
+    if aspect_ratio not in spec.aspect_ratios:
+        raise UsageError(f"Invalid aspect ratio {aspect_ratio!r}.", hint=f"Choose from: {', '.join(sorted(spec.aspect_ratios))}")
+    if resolution not in spec.resolutions:
+        raise UsageError(f"Invalid resolution {resolution!r}.", hint=f"Choose from: {', '.join(sorted(spec.resolutions))} (1080p may be tier-gated)")
+    # Validate explicitly rather than silently clamping — never mutate the user's intent.
+    if not (spec.min_duration <= duration <= spec.max_duration):
+        raise UsageError(
+            f"Duration {duration}s is out of range for {model} ({spec.min_duration}-{spec.max_duration}s).",
+            hint="Choose a duration within the model's supported range.",
+        )
+    if image and not spec.supports_image:
+        raise UsageError(
+            f"{model} does not support image-to-video.",
+            hint="Use grok-imagine-video-1.5-preview for -i (or omit -i for text-to-video).",
+        )
+    if reference_images and not spec.supports_reference:
+        raise UsageError(
+            f"{model} does not support reference-to-video (R2V).",
+            hint="Use grok-imagine-video for --ref (the 1.5-preview model rejects reference images).",
+        )
     if reference_images and len(reference_images) > 7:
         raise UsageError("At most 7 reference images are allowed for reference-to-video.")
-    duration = max(models.VIDEO_DURATION_MIN, min(models.VIDEO_DURATION_MAX, duration))
     payload: dict = {
         "model": model,
         "prompt": prompt,
@@ -89,7 +105,12 @@ def extend_video(
 
     ``video`` may be an http(s) URL or a local file (encoded as a data URI).
     """
-    duration = max(models.VIDEO_DURATION_MIN, min(models.VIDEO_DURATION_MAX, duration))
+    spec = models.video_spec(model)
+    if not (spec.min_duration <= duration <= spec.max_duration):
+        raise UsageError(
+            f"Duration {duration}s is out of range for {model} ({spec.min_duration}-{spec.max_duration}s).",
+            hint="Choose a duration within the model's supported range.",
+        )
     payload: dict = {"model": model, "video": {"url": _video_to_url(video)}, "duration": duration}
     if prompt:
         payload["prompt"] = prompt

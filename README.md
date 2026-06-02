@@ -61,8 +61,10 @@ grokcli models                    list available models (GET /v1/models)
 grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N] [-m MODEL]
 grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT] [-r 1k|2k] [-n N]
                                   edit 1-3 source images guided by a prompt
-grokcli video PROMPT [-i IMAGE] [--ref IMG ...] [-a ASPECT] [-r 480p|720p] [-d SECONDS]
-                                  -i = image-to-video; --ref = reference-to-video (R2V, up to 7)
+grokcli video PROMPT [-i IMAGE] [--ref IMG ...] [-a ASPECT] [-r 480p|720p|1080p] [-d 1-15]
+                                  -i = image-to-video (grok-imagine-video-1.5-preview);
+                                  --ref = reference-to-video / R2V, up to 7 (grok-imagine-video);
+                                  duration validated per model; 1080p is subscription-tier-gated
 grokcli video-extend VIDEO [PROMPT] [-d SECONDS]
                                   extend an existing video (local file or URL)
 grokcli tts TEXT [--voice V] [--language en] [-f mp3] [-m MODEL]
