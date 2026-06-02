@@ -67,7 +67,7 @@ $ grokcli chat "用一句话解释熵"
 熵衡量一个系统的宏观状态对应多少种微观排列方式 —— 简单说,就是自然走向无序的倾向。
 
 $ grokcli image "一只红色的折纸狐狸" -a 16:9
-~/grokcli-output/20260603_..._a_red_origami_fox.png
+./grokcli-output/20260603_..._a_red_origami_fox.png
 ```
 
 ## 为什么用 grokcli
@@ -163,7 +163,7 @@ grokcli config set chat_model grok-4.3
 grokcli config set output_dir ~/Pictures/grok
 ```
 
-生成的媒体写入 `~/grokcli-output/`。已存对话位于 `~/.config/grokcli/sessions/`,会自动限制大小
+生成的媒体写入 `./grokcli-output/`(当前工作目录下)。已存对话位于 `~/.config/grokcli/sessions/`,会自动限制大小
 (可用 `GROKCLI_MAX_SESSION_MESSAGES` 和 `GROKCLI_MAX_SESSIONS` 调整)。
 
 ## 工作原理
