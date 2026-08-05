@@ -2,10 +2,6 @@
   <img src="assets/banner.jpg" alt="grokcli" width="100%">
 </p>
 
-<p align="center">
-  <img src="assets/banner.mp4" alt="grokcli animated banner — click to play" width="100%">
-</p>
-
 ```text
    ██████╗ ██████╗   ██████╗ ██╗  ██╗  ██████╗ ██╗      ██╗
   ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║ ██╔╝ ██╔════╝ ██║      ██║

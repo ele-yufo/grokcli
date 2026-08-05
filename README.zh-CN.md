@@ -2,10 +2,6 @@
   <img src="assets/banner.jpg" alt="grokcli" width="100%">
 </p>
 
-<p align="center">
-  <img src="assets/banner.mp4" alt="grokcli 动态横幅——点击播放" width="100%">
-</p>
-
 ```text
    ██████╗ ██████╗   ██████╗ ██╗  ██╗  ██████╗ ██╗      ██╗
   ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║ ██╔╝ ██╔════╝ ██║      ██║
