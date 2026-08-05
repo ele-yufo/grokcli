@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="grokcli" width="100%">
+  <video autoplay loop muted playsinline poster="assets/banner.jpg" width="100%">
+    <source src="assets/banner.mp4" type="video/mp4">
+  </video>
 </p>
 
 ```text
