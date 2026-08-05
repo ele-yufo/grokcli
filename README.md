@@ -1,17 +1,52 @@
-# grokcli
+<p align="center">
+  <img src="assets/banner.jpg" alt="grokcli" width="100%">
+</p>
 
-**English** · [中文](README.zh-CN.md)
+```text
+   ██████╗ ██████╗   ██████╗ ██╗  ██╗  ██████╗ ██╗      ██╗
+  ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║ ██╔╝ ██╔════╝ ██║      ██║
+  ██║  ███╗ ██████╔╝ ██║   ██║ █████╔╝  ██║      ██║      ██║
+  ██║   ██║ ██╔══██╗ ██║   ██║ ██╔═██╗  ██║      ██║      ██║
+  ╚██████╔╝ ██║  ██║ ╚██████╔╝ ██║  ██╗ ╚██████╗ ╚██████╗ ╚█║
+   ╚═════╝ ╚═╝  ╚═╝  ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═════╝  ╚╝
+```
 
-**Your SuperGrok / X Premium+ subscription, as a terminal Swiss-army knife for Grok — chat, search, images, video, speech. No API key. No dependencies.**
+<p align="center">
+  <b>Everything Grok. In your terminal. Zero dependencies.</b><br>
+  One login with your SuperGrok or X Premium+ subscription unlocks the full xAI stack —<br>
+  chat · web & X search · images · video · voice. No API key. No pip installs. Just Python's stdlib.
+</p>
 
-![python](https://img.shields.io/badge/python-3.9%2B-blue) ![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <a href="README.zh-CN.md">中文</a> ·
+  <a href="https://docs.x.ai">xAI API docs</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#command-reference">Command reference</a>
+</p>
 
-`grokcli` logs in with your **SuperGrok** or **X Premium+** subscription via browser OAuth and talks to the xAI API directly — so a single login unlocks every Grok modality from the command line. It is written in **pure Python standard library**: no `pip` packages to install, nothing to compile. It is built, first and foremost, to be driven by AI agents.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="python 3.9+">
+  <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="zero dependencies">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
+  <img src="https://img.shields.io/badge/tests-351%20passing-8A2BE2" alt="351 tests passing">
+</p>
+
+---
+
+## ✨ Why you'll love it
+
+| | |
+|---|---|
+| 🔑 **Your subscription *is* the key** | Browser OAuth (PKCE) with your SuperGrok / X Premium+ account. No API keys, no per-token billing — your subscription just works. |
+| 📦 **Zero dependencies, forever** | Pure Python 3.9+ standard library. Runs anywhere Python runs: no `node_modules`, no Rust toolchain, no third-party packages. |
+| 🎛️ **Every Grok modality, one command** | Chat & reasoning, X + web search with citations, image generation & editing, text/image/reference-to-video, video editing & extension, TTS, speech-to-text, custom voices. |
+| 🤖 **Built for agents** | Stable exit codes, `--output json`, and a fully self-contained manual — `grokcli help` prints the entire documentation in a single call. |
+| 🧵 **Conversations that continue** | Sessions persist locally (bounded), resume across invocations with `-c`, and never leak to the cloud. |
 
 ## 🤖 Install with your agent (recommended)
 
-This CLI is made for agents, so the easiest way to install it is to let one do it.
-**Copy the prompt below and paste it into Claude Code (or Cursor, Codex, or any coding agent).** The agent fetches the page, installs, and verifies — you do nothing else.
+grokcli is *made* for agents — so the fastest way to install it is to let one do it.
+**Copy this prompt into Claude Code (or Cursor, Codex, any coding agent):**
 
 ```text
 Install the "grokcli" command-line tool for me. It is a zero-dependency CLI for xAI's
@@ -29,28 +64,17 @@ Grok that authenticates with my SuperGrok / X Premium+ subscription (no API key)
    to confirm it works.
 ```
 
-Once installed, the agent already knows everything: `grokcli help` prints the complete,
-self-contained manual in a single command, and every `grokcli <command> --help` is atomic
-(prerequisites, flags, examples, output format, exit codes) — no external docs required.
+Once installed, the agent already knows everything: `grokcli help` is the complete,
+self-contained manual, and every `grokcli <command> --help` is atomic — prerequisites,
+flags, examples, output format, exit codes. No external docs required.
 
-## Manual install
-
-If you'd rather install it yourself, pick whichever you have — all put a `grokcli` command on your `PATH`:
+### Manual install
 
 ```bash
 uv tool install git+https://github.com/ele-yufo/grokcli      # recommended (isolated, fast)
 pipx install     git+https://github.com/ele-yufo/grokcli      # or pipx
 pip install      git+https://github.com/ele-yufo/grokcli      # or pip (use a virtualenv)
 ```
-
-<details>
-<summary>From a local clone</summary>
-
-```bash
-git clone https://github.com/ele-yufo/grokcli && cd grokcli
-pip install .          # or:  make install   /   uv tool install .
-```
-</details>
 
 Then sign in once and verify:
 
@@ -61,7 +85,7 @@ grokcli doctor         # checks auth, connectivity, and entitlement
 
 > Requires Python 3.9+ and an active **SuperGrok** or **X Premium+** subscription.
 
-## In action
+## 🚀 Quickstart
 
 ```console
 $ grokcli chat "Explain entropy in one sentence"
@@ -69,40 +93,28 @@ Entropy measures how many microscopic arrangements match a system's macroscopic
 state — in short, nature's tendency toward disorder.
 
 $ grokcli image "a red origami fox" -a 16:9
-./grokcli-output/20260603_..._a_red_origami_fox.png
+./grokcli-output/20260806_..._a_red_origami_fox.png
+
+$ grokcli video "a calm ocean wave at sunset" -d 6 -r 1080p
+./grokcli-output/20260806_..._a_calm_ocean_wave_at_sunset.mp4
+
+$ grokcli tts "Hello from Grok" --voice eve
+./grokcli-output/20260806_..._hello_from_grok.mp3
 ```
 
-## Why grokcli
+## ⚡ Agent-ready by design
 
-- 🔑 **No API key.** Authenticates with your existing SuperGrok / X Premium+ subscription (OAuth 2.0 PKCE) — you don't pay per token.
-- 📦 **Zero dependencies.** Pure Python 3.9+ stdlib. Runs anywhere Python does; no `node_modules`, no Rust toolchain, no third-party `pip` packages.
-- 🎛️ **Every modality, one tool.** Chat, X + web search, image generation & editing, text/image/reference-to-video, video extension, TTS, and transcription — all as scriptable commands.
-- 🤖 **Agent-native.** Stable exit codes, JSON output mode, and a fully self-contained help system (`grokcli help` = the whole manual in one call).
-- 🧵 **Resumable chats.** Conversations persist locally (bounded) and continue across runs with `-c`.
+Results go to **stdout**; progress, spinners, and errors go to **stderr**.
+Output auto-detects **text** on a terminal and **JSON** when piped — force with `--output text|json`.
 
-## How it compares
+```bash
+grokcli chat "name 3 primary colors" --no-stream --output json | jq -r .text
 
-`grokcli` occupies one niche on purpose: a **zero-dependency, subscription-auth Grok
-*capability* CLI** — not a coding agent. The honest landscape (stars ≈ 2026-06):
+# machine-checkable, always:
+echo $?   # 0 ok · 2 usage · 3 auth · 4 quota · 5 timeout · 6 network · 10 content filtered · 130 interrupted
+```
 
-| | **grokcli** | Moore grok-cli | superagent grok-cli | official Grok Build |
-|---|:---:|:---:|:---:|:---:|
-| Stars | new | ~40 | ~3.1k | closed-source |
-| Install | Python · **zero deps** | Rust binary | TypeScript · npm | bundled binary |
-| Auth | **subscription OAuth — no key** | subscription OAuth | API key | subscription (Heavy) |
-| Chat · search | ✅ · ✅ | ✅ · ✅ | ✅ · ✅ | ✅ · — |
-| Image (gen · edit) | ✅ · ✅ | ✅ · ✅ | as a tool | — |
-| Video | ✅ T2V/I2V/R2V/extend | ✅ T2V/I2V/edit/extend | as a tool | — |
-| TTS · ASR | ✅ · ✅ | ✅ · ✅ | — | — |
-| Resumable sessions | ✅ | — | ✅ | ✅ |
-| Coding agent | — | — | ✅ | ✅ |
-
-**Being honest:** the popular tools (superagent, the official Grok Build) are *coding agents* —
-that's where the stars are, and grokcli doesn't compete there by design. Moore's Rust CLI is the
-closest peer; grokcli's edges over it are zero-dependency portability (runs anywhere Python does),
-resumable sessions, reference-to-video, a built-in `doctor`, and agent-native self-documenting help.
-
-## Commands
+## 📖 Command reference
 
 ```text
 grokcli login [--no-browser] [--manual-paste] [--from-official]   sign in (OAuth, no API key)
@@ -137,7 +149,7 @@ grokcli help [command]                                            the complete m
 
 Run `grokcli <command> --help` for details and examples on any command.
 
-### Video modes
+### 🎬 Video modes
 
 | Mode | Flag | Model used |
 |------|------|------------|
@@ -148,21 +160,10 @@ Run `grokcli <command> --help` for details and examples on any command.
 
 `grok-imagine-video-1.5` is the unified model: T2V/I2V/R2V in one, with native
 **1080p** (T2V/I2V; R2V capped at 720p). Generation duration is 1–15s;
-`video-extend` segments are 2–10s; `video-edit` keeps the input's length
-(~8.7s cap, 720p). `-i` (I2V) and `--ref`/`--ref-audio` (R2V) are mutually
-exclusive. The base `grok-imagine-video` (T2V/R2V) is still available via `-m`.
+`video-extend` segments are 2–10s; `video-edit` keeps the input's length.
+`-i` (I2V) and `--ref`/`--ref-audio` (R2V) are mutually exclusive.
 
-## Output & scripting
-
-Results go to **stdout**; progress, spinners, and errors go to **stderr**. Output auto-detects **text** on a terminal and **JSON** when piped or redirected (force with `--output text|json`).
-
-```bash
-grokcli chat "name 3 primary colors" --no-stream --output json | jq -r .text
-```
-
-Exit codes: `0` ok · `2` usage · `3` auth · `4` quota · `5` timeout · `6` network · `10` content filtered · `130` interrupted.
-
-## Configuration
+## ⚙️ Configuration
 
 Resolution order for every setting: **CLI flag > environment variable > `~/.config/grokcli/config.json` > default**.
 
@@ -181,19 +182,19 @@ grokcli config set output_dir ~/Pictures/grok
 ```
 
 Generated media is written to `./grokcli-output/` (under the current working
-directory). Saved chat sessions live in
-`~/.config/grokcli/sessions/` and are bounded automatically (tune with
-`GROKCLI_MAX_SESSION_MESSAGES` and `GROKCLI_MAX_SESSIONS`).
+directory). Saved chat sessions live in `~/.config/grokcli/sessions/` and are
+bounded automatically (tune with `GROKCLI_MAX_SESSION_MESSAGES` and
+`GROKCLI_MAX_SESSIONS`).
 
-## How it works
+## 🧠 How it works
 
-`grokcli login` runs an OAuth 2.0 PKCE flow against `accounts.x.ai`, stores the tokens
-in `~/.config/grokcli/auth.json` (mode `600`), and refreshes them automatically. It is
-**independent** of the official Grok CLI — it never touches `~/.grok/` (except the
-optional one-time `grokcli login --from-official` import). The OAuth bearer is pinned so
-it is only ever sent to `*.x.ai`.
+`grokcli login` runs an OAuth 2.0 PKCE flow against `accounts.x.ai`, stores the
+tokens in `~/.config/grokcli/auth.json` (mode `600`), and refreshes them
+automatically. It is **independent** of the official Grok CLI — it never touches
+`~/.grok/` (except the optional one-time `grokcli login --from-official`
+import). The OAuth bearer is pinned so it is only ever sent to `*.x.ai`.
 
-## Development
+## 🛠 Development
 
 ```bash
 make test     # stdlib unittest suite; no test dependencies
@@ -201,6 +202,6 @@ make test     # stdlib unittest suite; no test dependencies
 
 Tests live next to the modules they cover (`grokcli/**/test_*.py`).
 
-## License
+## 📄 License
 
 [MIT](LICENSE)

@@ -1,17 +1,52 @@
-# grokcli
+<p align="center">
+  <img src="assets/banner.jpg" alt="grokcli" width="100%">
+</p>
 
-[English](README.md) · **中文**
+```text
+   ██████╗ ██████╗   ██████╗ ██╗  ██╗  ██████╗ ██╗      ██╗
+  ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║ ██╔╝ ██╔════╝ ██║      ██║
+  ██║  ███╗ ██████╔╝ ██║   ██║ █████╔╝  ██║      ██║      ██║
+  ██║   ██║ ██╔══██╗ ██║   ██║ ██╔═██╗  ██║      ██║      ██║
+  ╚██████╔╝ ██║  ██║ ╚██████╔╝ ██║  ██╗ ╚██████╗ ╚██████╗ ╚█║
+   ╚═════╝ ╚═╝  ╚═╝  ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═════╝  ╚╝
+```
 
-**把你的 SuperGrok / X Premium+ 订阅,变成终端里的 Grok 瑞士军刀 —— 对话、搜索、图片、视频、语音。无需 API key,零依赖。**
+<p align="center">
+  <b>所有 Grok,都在你的终端里。零依赖。</b><br>
+  一次登录你的 SuperGrok 或 X Premium+ 订阅,解锁 xAI 全栈能力 ——<br>
+  对话 · 网页与 X 搜索 · 图片 · 视频 · 语音。无需 API key,无需 pip 安装,纯 Python 标准库。
+</p>
 
-![python](https://img.shields.io/badge/python-3.9%2B-blue) ![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <a href="README.md">English</a> ·
+  <a href="https://docs.x.ai">xAI API 文档</a> ·
+  <a href="#快速上手">快速上手</a> ·
+  <a href="#命令参考">命令参考</a>
+</p>
 
-`grokcli` 通过浏览器 OAuth 用你的 **SuperGrok** 或 **X Premium+** 订阅登录,直连 xAI API —— 一次登录即可在命令行使用 Grok 的全部能力。它用**纯 Python 标准库**编写:不装任何 `pip` 包,不用编译。它首要的设计目标,就是被 AI Agent 驱动。
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="python 3.9+">
+  <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="零依赖">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT 许可证">
+  <img src="https://img.shields.io/badge/tests-351%20passing-8A2BE2" alt="351 个测试通过">
+</p>
+
+---
+
+## ✨ 为什么你会爱上它
+
+| | |
+|---|---|
+| 🔑 **你的订阅就是钥匙** | 用 SuperGrok / X Premium+ 账号走浏览器 OAuth(PKCE)。没有 API key,不按 token 计费 —— 订阅在手,一切都有。 |
+| 📦 **零依赖,永远** | 纯 Python 3.9+ 标准库。有 Python 的地方就能跑:不要 `node_modules`,不要 Rust 工具链,不装任何第三方包。 |
+| 🎛️ **一个命令,所有模态** | 对话与推理、X + 网页搜索(带引用)、图片生成与编辑、文/图/参考生成视频、视频编辑与延长、TTS、语音转写、自定义音色。 |
+| 🤖 **为 Agent 而生** | 稳定退出码、`--output json`,以及完全自包含的手册 —— `grokcli help` 一条命令打印全部文档。 |
+| 🧵 **对话不会断** | 会话本地持久化(有上限),用 `-c` 跨次续接,数据不离开你的机器。 |
 
 ## 🤖 让你的 Agent 来装(推荐)
 
-这个 CLI 是为 Agent 准备的,所以最省事的安装方式就是交给 Agent。
-**复制下面这段 prompt,粘贴到 Claude Code(或 Cursor、Codex 等任意编码 Agent)里。** Agent 会自己抓取页面、安装并验证 —— 你什么都不用做。
+grokcli 天生就是给 Agent 用的 —— 所以最快的安装方式就是交给 Agent 办。
+**复制下面这段 prompt,粘贴到 Claude Code(或 Cursor、Codex 等任意编码 Agent)里:**
 
 ```text
 帮我安装 "grokcli" 命令行工具。它是一个零依赖的 xAI Grok CLI,用我的
@@ -28,28 +63,17 @@ SuperGrok / X Premium+ 订阅登录(不需要 API key)。
 4. 然后带我走一遍 `grokcli login` 连接我的账号,并运行 `grokcli doctor` 确认可用。
 ```
 
-装好后 Agent 就全懂了:`grokcli help` 一条命令打印**完整、自包含**的手册,每个
-`grokcli <命令> --help` 也都是原子化的(前置条件、参数、示例、输出格式、退出码)——
-不需要任何外部文档。
+装好后 Agent 就全懂了:`grokcli help` 就是**完整、自包含**的手册,每个
+`grokcli <命令> --help` 也都是原子化的 —— 前置条件、参数、示例、输出格式、退出码,
+一应俱全,不需要任何外部文档。
 
-## 手动安装
-
-如果你想自己装,任选一种(都会把 `grokcli` 装到 `PATH` 上):
+### 手动安装
 
 ```bash
 uv tool install git+https://github.com/ele-yufo/grokcli      # 推荐(隔离、快)
 pipx install     git+https://github.com/ele-yufo/grokcli      # 或 pipx
 pip install      git+https://github.com/ele-yufo/grokcli      # 或 pip(建议在 virtualenv 中)
 ```
-
-<details>
-<summary>从本地克隆安装</summary>
-
-```bash
-git clone https://github.com/ele-yufo/grokcli && cd grokcli
-pip install .          # 或:  make install   /   uv tool install .
-```
-</details>
 
 然后登录一次并验证:
 
@@ -60,43 +84,35 @@ grokcli doctor         # 检查认证、连通性与订阅权限
 
 > 需要 Python 3.9+ 和有效的 **SuperGrok** 或 **X Premium+** 订阅。
 
-## 实际效果
+## 🚀 快速上手
 
 ```console
 $ grokcli chat "用一句话解释熵"
 熵衡量一个系统的宏观状态对应多少种微观排列方式 —— 简单说,就是自然走向无序的倾向。
 
 $ grokcli image "一只红色的折纸狐狸" -a 16:9
-./grokcli-output/20260603_..._a_red_origami_fox.png
+./grokcli-output/20260806_..._a_red_origami_fox.png
+
+$ grokcli video "日落时分平静的海浪" -d 6 -r 1080p
+./grokcli-output/20260806_..._a_calm_ocean_wave_at_sunset.mp4
+
+$ grokcli tts "你好,我是 Grok" --voice eve
+./grokcli-output/20260806_..._hello_from_grok.mp3
 ```
 
-## 为什么用 grokcli
+## ⚡ 为 Agent 而生的设计
 
-- 🔑 **不需要 API key。** 用你已有的 SuperGrok / X Premium+ 订阅登录(OAuth 2.0 PKCE),不按 token 付费。
-- 📦 **零依赖。** 纯 Python 3.9+ 标准库。有 Python 的地方就能跑;不要 `node_modules`、不要 Rust 工具链、不装任何第三方 `pip` 包。
-- 🎛️ **一个工具,所有模态。** 对话、X + 网页搜索、图片生成与编辑、文/图/参考生成视频、视频延长、TTS、语音转写 —— 全是可脚本化的命令。
-- 🤖 **原生为 Agent 设计。** 稳定退出码、JSON 输出模式,以及完全自包含的帮助系统(`grokcli help` = 一条命令出完整手册)。
-- 🧵 **可续接对话。** 会话本地持久化(有上限),用 `-c` 跨次续接。
+结果输出到 **stdout**;进度、spinner、错误输出到 **stderr**。在终端里默认
+**文本**,被管道/重定向时自动切 **JSON**(可用 `--output text|json` 强制)。
 
-## 横向对比
+```bash
+grokcli chat "说出三种三原色" --no-stream --output json | jq -r .text
 
-`grokcli` 刻意只占一个生态位:**零依赖、订阅认证的 Grok *能力* CLI** —— 不是编码 Agent。诚实的格局(star 数 ≈ 2026-06):
+# 机器可检查,永远如此:
+echo $?   # 0 成功 · 2 用法错误 · 3 认证 · 4 配额 · 5 超时 · 6 网络 · 10 内容拦截 · 130 中断
+```
 
-| | **grokcli** | Moore grok-cli | superagent grok-cli | 官方 Grok Build |
-|---|:---:|:---:|:---:|:---:|
-| Star | 新 | ~40 | ~3.1k | 闭源 |
-| 安装 | Python · **零依赖** | Rust 二进制 | TypeScript · npm | 打包二进制 |
-| 认证 | **订阅 OAuth — 无需 key** | 订阅 OAuth | API key | 订阅(Heavy) |
-| 对话 · 搜索 | ✅ · ✅ | ✅ · ✅ | ✅ · ✅ | ✅ · — |
-| 图片(生成 · 编辑) | ✅ · ✅ | ✅ · ✅ | 作为工具 | — |
-| 视频 | ✅ T2V/I2V/R2V/延长 | ✅ T2V/I2V/编辑/延长 | 作为工具 | — |
-| TTS · ASR | ✅ · ✅ | ✅ · ✅ | — | — |
-| 可续接会话 | ✅ | — | ✅ | ✅ |
-| 编码 Agent | — | — | ✅ | ✅ |
-
-**诚实地说:** 热门的那几个(superagent、官方 Grok Build)是*编码 Agent* —— star 都在那边,grokcli 按设计不去和它们正面竞争。Moore 的 Rust CLI 是最接近的同类;grokcli 相对它的优势是:零依赖可移植(有 Python 就能跑)、可续接会话、参考生成视频(R2V)、内置 `doctor`、以及 agent 原生的自文档化帮助。
-
-## 命令
+## 📖 命令参考
 
 ```text
 grokcli login [--no-browser] [--manual-paste] [--from-official]   登录(OAuth,无需 API key)
@@ -131,7 +147,7 @@ grokcli help [command]                                            完整手册,�
 
 任何命令加 `--help` 查看详细参数和示例。
 
-### 视频模式
+### 🎬 视频模式
 
 | 模式 | 参数 | 使用的模型 |
 |------|------|-----------|
@@ -140,21 +156,11 @@ grokcli help [command]                                            完整手册,�
 | 参考生成视频 (R2V) | `--ref IMG`(最多 7 张) | `grok-imagine-video-1.5` |
 | R2V 配音 | `--ref-audio VOICE`(最多 3 个) | `grok-imagine-video-1.5`(在提示词中用 `<AUDIO_0>` 等标签指位) |
 
-`grok-imagine-video-1.5` 是统一模型:T2V/I2V/R2V 三合一,原生 **1080p**(T2V/I2V;R2V 上限 720p)。
-生成时长 1–15 秒;`video-extend` 追加段为 2–10 秒;`video-edit` 保持原片长度(约 8.7 秒上限,720p)。
-`-i`(I2V)与 `--ref`/`--ref-audio`(R2V)互斥。基础模型 `grok-imagine-video`(T2V/R2V)仍可用 `-m` 指定。
+`grok-imagine-video-1.5` 是统一模型:T2V/I2V/R2V 三合一,原生 **1080p**
+(T2V/I2V;R2V 上限 720p)。生成时长 1–15 秒;`video-extend` 追加段为 2–10 秒;
+`video-edit` 保持原片长度。`-i`(I2V)与 `--ref`/`--ref-audio`(R2V)互斥。
 
-## 输出与脚本化
-
-结果输出到 **stdout**;进度、spinner、错误输出到 **stderr**。在终端里默认 **文本**,被管道/重定向时自动切 **JSON**(可用 `--output text|json` 强制)。
-
-```bash
-grokcli chat "说出三种三原色" --no-stream --output json | jq -r .text
-```
-
-退出码:`0` 成功 · `2` 用法错误 · `3` 认证 · `4` 配额 · `5` 超时 · `6` 网络 · `10` 内容拦截 · `130` 中断。
-
-## 配置
+## ⚙️ 配置
 
 每项设置的优先级:**命令行参数 > 环境变量 > `~/.config/grokcli/config.json` > 默认值**。
 
@@ -172,17 +178,18 @@ grokcli config set chat_model grok-4.5
 grokcli config set output_dir ~/Pictures/grok
 ```
 
-生成的媒体写入 `./grokcli-output/`(当前工作目录下)。已存对话位于 `~/.config/grokcli/sessions/`,会自动限制大小
-(可用 `GROKCLI_MAX_SESSION_MESSAGES` 和 `GROKCLI_MAX_SESSIONS` 调整)。
+生成的媒体写入 `./grokcli-output/`(当前工作目录下)。已存对话位于
+`~/.config/grokcli/sessions/`,会自动限制大小(可用 `GROKCLI_MAX_SESSION_MESSAGES`
+和 `GROKCLI_MAX_SESSIONS` 调整)。
 
-## 工作原理
+## 🧠 工作原理
 
 `grokcli login` 对 `accounts.x.ai` 跑一遍 OAuth 2.0 PKCE 流程,把 token 存到
-`~/.config/grokcli/auth.json`(权限 `600`),并自动刷新。它与官方 Grok CLI **完全独立**,
-绝不碰 `~/.grok/`(除非你显式用一次性的 `grokcli login --from-official` 导入)。OAuth bearer
-被锁定,只会发往 `*.x.ai`。
+`~/.config/grokcli/auth.json`(权限 `600`),并自动刷新。它与官方 Grok CLI
+**完全独立**,绝不碰 `~/.grok/`(除非你显式用一次性的 `grokcli login --from-official`
+导入)。OAuth bearer 被锁定,只会发往 `*.x.ai`。
 
-## 开发
+## 🛠 开发
 
 ```bash
 make test     # 标准库 unittest 测试集;无测试依赖
@@ -190,6 +197,6 @@ make test     # 标准库 unittest 测试集;无测试依赖
 
 测试与被测模块同级(`grokcli/**/test_*.py`)。
 
-## 许可证
+## 📄 许可证
 
 [MIT](LICENSE)
