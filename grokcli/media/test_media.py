@@ -7,6 +7,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, Dict
 from unittest import mock
 
 from grokcli.client import GrokClient
@@ -137,7 +138,7 @@ class TtsTest(unittest.TestCase):
 
 class TranscribeTest(unittest.TestCase):
     def test_multipart_contains_fields(self):
-        body, content_type = transcribe._encode_multipart(
+        body, content_type = files.encode_multipart(
             fields={"model": "grok-transcribe"}, file_field="file", filename="a.mp3", file_bytes=b"RAW", file_mime="audio/mpeg"
         )
         self.assertIn("multipart/form-data; boundary=", content_type)
@@ -209,7 +210,7 @@ class VideoFailureStatusTest(unittest.TestCase):
             client.download = mock.Mock(side_effect=lambda url, path, **k: path)
             with mock.patch.object(video.files, "image_to_data_uri", return_value="data:image/png;base64,AAA"), mock.patch.object(video.time, "sleep"):
                 video.generate_video(
-                    client, prompt="p", model="grok-imagine-video-1.5-preview", aspect_ratio="16:9",
+                    client, prompt="p", model="grok-imagine-video-1.5", aspect_ratio="16:9",
                     resolution="720p", duration=5, output_dir=Path(tmp), image="x.png",
                 )
             submit_kwargs = client.request_json.call_args_list[0].kwargs
@@ -326,7 +327,7 @@ class VideoReferenceAndExtendTest(unittest.TestCase):
                     resolution="720p", duration=5, output_dir=Path(tmp), reference_images=["a", "b"],
                 )
             refs = client.request_json.call_args_list[0].kwargs["json_body"]["reference_images"]
-            self.assertEqual([r["image_url"] for r in refs], ["data:image/png;base64,a", "data:image/png;base64,b"])
+            self.assertEqual([r["url"] for r in refs], ["data:image/png;base64,a", "data:image/png;base64,b"])
 
     def test_too_many_reference_images_rejected(self):
         client = _client("/tmp")
@@ -351,10 +352,16 @@ class VideoPerModelValidationTest(unittest.TestCase):
             self._gen(duration=20)
         self.assertIn("out of range", ctx.exception.message)
 
-    def test_reference_images_rejected_on_preview_model(self):
-        with self.assertRaises(UsageError) as ctx:
-            self._gen(model="grok-imagine-video-1.5-preview", reference_images=["a"])
-        self.assertIn("reference-to-video", ctx.exception.message)
+    def test_reference_images_accepted_on_15(self):
+        # The 1.5 model went from preview (I2V only, R2V rejected) to the unified
+        # T2V/I2V/R2V flagship (2026-08) — R2V must now pass client validation.
+        client = _client("/tmp")
+        client.request_json = mock.Mock(side_effect=RuntimeError("reached-submit"))
+        with self.assertRaises(RuntimeError):
+            video.generate_video(
+                client, prompt="p", model="grok-imagine-video-1.5", aspect_ratio="16:9",
+                resolution="720p", duration=5, output_dir=Path("/tmp"), reference_images=["a"],
+            )
 
     def test_image_rejected_on_base_model(self):
         with self.assertRaises(UsageError) as ctx:
@@ -379,8 +386,10 @@ class VideoPerModelValidationTest(unittest.TestCase):
     def test_video_spec_lookup(self):
         from grokcli import models
 
-        self.assertFalse(models.video_spec("grok-imagine-video-1.5-preview").supports_reference)
-        self.assertTrue(models.video_spec("grok-imagine-video").supports_reference)
+        self.assertTrue(models.video_spec("grok-imagine-video-1.5").supports_reference)
+        self.assertFalse(models.video_spec("grok-imagine-video").supports_image)
+        self.assertEqual(models.video_spec("grok-imagine-video-1.5").r2v_max_resolution, "720p")
+        self.assertEqual(models.video_spec("grok-imagine-video").max_reference_audios, 0)
         self.assertTrue(models.video_spec("some-future-model").supports_reference)  # permissive default
 
     def test_video_to_url_http_passthrough(self):
@@ -414,6 +423,231 @@ class VideoPerModelValidationTest(unittest.TestCase):
             self.assertEqual(body["video"]["url"], "https://v/in.mp4")
             self.assertEqual(body["prompt"], "more")
             client.download.assert_called_once_with("https://v/ext.mp4", path)
+
+
+class VideoR2VAudioAndEditTest(unittest.TestCase):
+    """R2V narration, mode exclusivity, 1080p caps, edits, and polling extras."""
+
+    def _generate(self, tmp, **over: Any):
+        client = _client(tmp)
+        client.request_json = mock.Mock(
+            side_effect=[{"request_id": "r"}, {"status": "done", "video": {"url": "https://v/x.mp4"}}]
+        )
+        client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+        kw: Dict[str, Any] = {"prompt": "p", "model": "grok-imagine-video-1.5", "aspect_ratio": "16:9",
+                              "resolution": "720p", "duration": 5, "output_dir": Path(tmp)}
+        kw.update(over)
+        with mock.patch.object(video.time, "sleep"):
+            video.generate_video(client, **kw)
+        return client.request_json.call_args_list[0].kwargs["json_body"]
+
+    def test_reference_audios_in_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self._generate(tmp, reference_audios=["eve", "rex"])
+        self.assertEqual(payload["reference_audios"], [{"voice_id": "eve"}, {"voice_id": "rex"}])
+
+    def test_more_than_three_reference_audios_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(UsageError):
+                self._generate(tmp, reference_audios=["a", "b", "c", "d"])
+
+    def test_reference_audios_rejected_on_base_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(UsageError) as ctx:
+                self._generate(tmp, model="grok-imagine-video", reference_audios=["eve"])
+        self.assertIn("narration", ctx.exception.message)
+
+    def test_image_and_references_mutually_exclusive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(UsageError) as ctx:
+                self._generate(tmp, image="a.png", reference_images=["b.png"])
+        self.assertIn("mutually exclusive", ctx.exception.message)
+
+    def test_image_and_reference_audio_mutually_exclusive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(UsageError):
+                self._generate(tmp, image="a.png", reference_audios=["eve"])
+
+    def test_r2v_1080p_rejected_on_15(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(UsageError) as ctx:
+                self._generate(tmp, reference_images=["a.png"], resolution="1080p")
+        self.assertIn("720p", ctx.exception.message)
+
+    def test_t2v_1080p_reaches_submit_on_15(self):
+        # Native 1080p for T2V/I2V on 1.5: validation passes, submit is reached.
+        client = _client("/tmp")
+        client.request_json = mock.Mock(side_effect=RuntimeError("reached-submit"))
+        with self.assertRaises(RuntimeError):
+            video.generate_video(
+                client, prompt="p", model="grok-imagine-video-1.5", aspect_ratio="16:9",
+                resolution="1080p", duration=5, output_dir=Path("/tmp"),
+            )
+
+    def test_extend_duration_beyond_10_rejected(self):
+        client = _client("/tmp")
+        with self.assertRaises(UsageError):
+            video.extend_video(
+                client, video="https://v/in.mp4", model="grok-imagine-video-1.5", duration=11, output_dir=Path("/tmp")
+            )
+
+    def test_extend_duration_2_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                side_effect=[{"request_id": "r"}, {"status": "done", "video": {"url": "https://v/x.mp4"}}]
+            )
+            client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+            with mock.patch.object(video.time, "sleep"):
+                video.extend_video(
+                    client, video="https://v/in.mp4", model="grok-imagine-video-1.5", duration=2, output_dir=Path(tmp)
+                )
+            self.assertEqual(client.request_json.call_args_list[0].kwargs["json_body"]["duration"], 2)
+
+    def test_edit_video_submits_and_downloads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                side_effect=[{"request_id": "r"}, {"status": "done", "video": {"url": "https://v/e.mp4"}}]
+            )
+            client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+            with mock.patch.object(video.time, "sleep"):
+                path = video.edit_video(client, video="https://v/in.mp4", model="m", prompt="add neon", output_dir=Path(tmp))
+            self.assertEqual(client.request_json.call_args_list[0].args, ("POST", "/videos/edits"))
+            body = client.request_json.call_args_list[0].kwargs["json_body"]
+            self.assertEqual(body["video"]["url"], "https://v/in.mp4")
+            self.assertEqual(body["prompt"], "add neon")
+            client.download.assert_called_once_with("https://v/e.mp4", path)
+
+    def test_edit_video_requires_prompt(self):
+        client = _client("/tmp")
+        with self.assertRaises(UsageError):
+            video.edit_video(client, video="https://v/in.mp4", model="m", prompt="  ", output_dir=Path("/tmp"))
+
+    def test_respect_moderation_false_raises_content_filter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                side_effect=[{"request_id": "r"}, {"status": "done", "video": {"url": "", "respect_moderation": False}}]
+            )
+            with self.assertRaises(ContentFilterError):
+                with mock.patch.object(video.time, "sleep"):
+                    video.generate_video(
+                        client, prompt="p", model="grok-imagine-video-1.5", aspect_ratio="16:9",
+                        resolution="720p", duration=5, output_dir=Path(tmp),
+                    )
+
+    def test_poll_reports_progress_to_callback(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                side_effect=[
+                    {"request_id": "r"},
+                    {"status": "pending", "progress": 42},
+                    {"status": "done", "video": {"url": "https://v/x.mp4"}},
+                ]
+            )
+            client.download = mock.Mock(side_effect=lambda url, path, **k: path)
+            with mock.patch.object(video.time, "sleep"):
+                video.generate_video(
+                    client, prompt="p", model="grok-imagine-video-1.5", aspect_ratio="16:9",
+                    resolution="720p", duration=5, output_dir=Path(tmp),
+                    on_status=lambda s, e, p: calls.append((s, p)),
+                )
+        self.assertEqual(calls, [("pending 42%", 42)])
+
+
+class TTSNewParamsTest(unittest.TestCase):
+    """voice_id, speed/latency/normalization, text cap, output_format codec."""
+
+    def _synth(self, tmp, **over: Any):
+        client = _client(tmp)
+        client.request = mock.Mock(return_value=Response(200, {"Content-Type": "audio/mpeg"}, b"AUDIO"))
+        kw: Dict[str, Any] = dict(text="hi", model="grok-tts", voice=None, fmt="mp3", output_dir=Path(tmp), language="en")
+        kw.update(over)
+        tts.synthesize(client, **kw)
+        return json.loads(client.request.call_args.kwargs["body"].decode())
+
+    def test_voice_id_instead_of_voice(self):
+        payload = self._synth("/tmp", voice="Rex")
+        self.assertEqual(payload["voice_id"], "Rex")
+        self.assertNotIn("voice", payload)
+
+    def test_no_model_field_sent(self):
+        payload = self._synth("/tmp")
+        self.assertNotIn("model", payload)
+        self.assertEqual(payload["text"], "hi")
+        self.assertEqual(payload["language"], "en")
+
+    def test_speed_latency_normalize_in_payload(self):
+        payload = self._synth("/tmp", speed=0.8, optimize_streaming_latency=2, text_normalization=True)
+        self.assertEqual(payload["speed"], 0.8)
+        self.assertEqual(payload["optimize_streaming_latency"], 2)
+        self.assertTrue(payload["text_normalization"])
+
+    def test_output_format_codec_for_wav(self):
+        payload = self._synth("/tmp", fmt="wav")
+        self.assertEqual(payload["output_format"], {"codec": "wav"})
+
+    def test_default_mp3_sends_no_output_format(self):
+        payload = self._synth("/tmp")
+        self.assertNotIn("output_format", payload)
+
+    def test_speed_out_of_range_rejected(self):
+        with self.assertRaises(UsageError):
+            self._synth("/tmp", speed=2.0)
+
+    def test_latency_out_of_range_rejected(self):
+        with self.assertRaises(UsageError):
+            self._synth("/tmp", optimize_streaming_latency=5)
+
+    def test_invalid_codec_rejected(self):
+        with self.assertRaises(UsageError):
+            self._synth("/tmp", fmt="ogg")
+
+    def test_text_over_15000_rejected(self):
+        with self.assertRaises(UsageError):
+            self._synth("/tmp", text="x" * 15001)
+
+
+class TranscribeNewParamsTest(unittest.TestCase):
+    """vad_threshold, language, diarize, keyterm option fields."""
+
+    def _transcribe(self, tmp, **over: Any):
+        audio = Path(tmp) / "a.wav"
+        audio.write_bytes(b"WAVDATA")
+        client = _client(tmp)
+        client.request = mock.Mock(
+            return_value=Response(200, {"Content-Type": "application/json"}, json.dumps({"text": "hi"}).encode())
+        )
+        kw: Dict[str, Any] = dict(audio_path=str(audio), model="grok-transcribe")
+        kw.update(over)
+        transcribe.transcribe(client, **kw)
+        return client.request.call_args.kwargs["body"].decode("latin-1")
+
+    def test_vad_threshold_and_language_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            body = self._transcribe(tmp, vad_threshold=0.3, language="en")
+        self.assertIn('name="vad_threshold"', body)
+        self.assertIn("0.3", body)
+        self.assertIn('name="language"', body)
+
+    def test_diarize_and_repeated_keyterms(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            body = self._transcribe(tmp, diarize=True, keyterms=["Grok", "API"])
+        self.assertIn('name="diarize"', body)
+        self.assertEqual(body.count('name="keyterm"'), 2)
+        # Option fields must precede the file part (API contract for streamable uploads).
+        self.assertLess(body.index("keyterm"), body.index('name="file"'))
+
+    def test_vad_threshold_out_of_range_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            audio = Path(tmp) / "a.wav"
+            audio.write_bytes(b"WAVDATA")
+            client = _client(tmp)
+            with self.assertRaises(UsageError):
+                transcribe.transcribe(client, audio_path=str(audio), model="m", vad_threshold=1.5)
 
 
 if __name__ == "__main__":  # pragma: no cover

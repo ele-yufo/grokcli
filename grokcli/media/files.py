@@ -12,7 +12,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def safe_filename(text: str, *, max_len: int = 40) -> str:
@@ -66,3 +66,37 @@ def image_to_data_uri(image_path: str) -> str:
         return image_path
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:{mime};base64,{encoded}"
+
+
+def encode_multipart(
+    *,
+    fields: Dict[str, Any],
+    file_field: str,
+    filename: str,
+    file_bytes: bytes,
+    file_mime: str,
+) -> Tuple[bytes, str]:
+    """Build a multipart/form-data body and its Content-Type header (stdlib only).
+
+    Text fields are placed BEFORE the file part on purpose: the xAI STT API
+    documents that fields sent after ``file`` may be ignored on streamable
+    uploads. A field value may be a string or a list of strings to repeat a
+    field (e.g. ``keyterm``).
+    """
+    boundary = f"----grokcli{uuid.uuid4().hex}"
+    crlf = b"\r\n"
+    parts: List[bytes] = []
+    for name, value in fields.items():
+        for item in (value if isinstance(value, (list, tuple)) else [value]):
+            parts.append(f"--{boundary}".encode())
+            parts.append(f'Content-Disposition: form-data; name="{name}"'.encode())
+            parts.append(b"")
+            parts.append(str(item).encode("utf-8"))
+    parts.append(f"--{boundary}".encode())
+    parts.append(
+        f'Content-Disposition: form-data; name="{file_field}"; filename="{filename}"'.encode()
+    )
+    parts.append(f"Content-Type: {file_mime}".encode())
+    parts.append(b"")
+    body = crlf.join(parts) + crlf + file_bytes + crlf + f"--{boundary}--".encode() + crlf
+    return body, f"multipart/form-data; boundary={boundary}"

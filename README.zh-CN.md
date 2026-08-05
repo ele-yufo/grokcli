@@ -105,19 +105,25 @@ grokcli status                                                    登录状态�
 grokcli doctor [--offline]                                        健康检查
 
 grokcli chat [PROMPT] [-m MODEL] [-s SYSTEM] [--no-stream] [--web] [--x]
-             [-c] [--session NAME] [--new]                        一次性 / stdin('-')/ REPL;可续接
+             [--effort none|low|medium|high] [--priority] [-c] [--session NAME] [--new]
+                                                                  一次性 / stdin('-')/ REPL;可续接
 grokcli search QUERY [--no-web] [--no-x]                          X + 网页搜索,带引用作答
 grokcli sessions list | show [id] | clear [id|--all]              管理已存对话
 grokcli models                                                    列出可用模型
 
 grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N]                生成图片
 grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT]    按提示编辑 1-3 张源图
-grokcli video PROMPT [-i IMG] [--ref IMG ...] [-r 480p|720p|1080p] [-d 1-15]
-                                                                  文/图/参考生成视频
+grokcli video PROMPT [-i IMG] [--ref IMG ...] [--ref-audio VOICE ...]
+             [-r 480p|720p|1080p] [-d 1-15]                       文/图/参考生成视频
 grokcli video-extend VIDEO [PROMPT] [-d SECONDS]                  延长已有视频
-grokcli tts TEXT [--voice V] [--language en] [-f mp3]             文字转语音
+grokcli video-edit VIDEO PROMPT                                   按提示编辑已有视频
+grokcli tts TEXT [--voice V] [--language en] [-f mp3] [--speed 0.7-1.5]
+             [--latency 0|1|2] [--normalize]                      文字转语音
 grokcli voices                                                    列出 TTS 音色
-grokcli transcribe AUDIO                                          语音转文字(ASR)
+grokcli voice clone AUDIO [--name N] [--gender g] ...             克隆自定义音色
+grokcli voice list | delete <voice_id>                            管理克隆音色
+grokcli transcribe AUDIO [--vad-threshold 0-1] [--diarize] [--keyterm K ...]
+                                                                  语音转文字(ASR)
 
 grokcli config show | path | get KEY | set KEY VALUE              查看/修改默认配置
 grokcli help [command]                                            完整手册,一条命令搞定
@@ -125,15 +131,18 @@ grokcli help [command]                                            完整手册,�
 
 任何命令加 `--help` 查看详细参数和示例。
 
-### 视频三种模式
+### 视频模式
 
 | 模式 | 参数 | 使用的模型 |
 |------|------|-----------|
-| 文生视频 (T2V) | *(无)* | `grok-imagine-video` |
-| 图生视频 (I2V) | `-i IMAGE` | `grok-imagine-video-1.5-preview` |
-| 参考生成视频 (R2V) | `--ref IMG`(最多 7 张) | `grok-imagine-video` |
+| 文生视频 (T2V) | *(无)* | `grok-imagine-video-1.5`(默认) |
+| 图生视频 (I2V) | `-i IMAGE` | `grok-imagine-video-1.5` |
+| 参考生成视频 (R2V) | `--ref IMG`(最多 7 张) | `grok-imagine-video-1.5` |
+| R2V 配音 | `--ref-audio VOICE`(最多 3 个) | `grok-imagine-video-1.5`(在提示词中用 `<AUDIO_0>` 等标签指位) |
 
-时长按模型校验(1–15 秒);`1080p` 存在但受订阅 tier 限制。
+`grok-imagine-video-1.5` 是统一模型:T2V/I2V/R2V 三合一,原生 **1080p**(T2V/I2V;R2V 上限 720p)。
+生成时长 1–15 秒;`video-extend` 追加段为 2–10 秒;`video-edit` 保持原片长度(约 8.7 秒上限,720p)。
+`-i`(I2V)与 `--ref`/`--ref-audio`(R2V)互斥。基础模型 `grok-imagine-video`(T2V/R2V)仍可用 `-m` 指定。
 
 ## 输出与脚本化
 
@@ -159,7 +168,7 @@ grokcli chat "说出三种三原色" --no-stream --output json | jq -r .text
 | 关闭彩色 | `NO_COLOR` | TTY 下彩色 |
 
 ```bash
-grokcli config set chat_model grok-4.3
+grokcli config set chat_model grok-4.5
 grokcli config set output_dir ~/Pictures/grok
 ```
 

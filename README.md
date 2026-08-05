@@ -111,19 +111,25 @@ grokcli status                                                    login status &
 grokcli doctor [--offline]                                        health check
 
 grokcli chat [PROMPT] [-m MODEL] [-s SYSTEM] [--no-stream] [--web] [--x]
-             [-c] [--session NAME] [--new]                        one-shot, stdin ('-'), or a REPL; resumable
+             [--effort none|low|medium|high] [--priority] [-c] [--session NAME] [--new]
+                                                                  one-shot, stdin ('-'), or a REPL; resumable
 grokcli search QUERY [--no-web] [--no-x]                          X + web search, answered with citations
 grokcli sessions list | show [id] | clear [id|--all]              manage saved conversations
 grokcli models                                                    list available models
 
 grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N]                generate image(s)
 grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT]    edit 1-3 source images by prompt
-grokcli video PROMPT [-i IMG] [--ref IMG ...] [-r 480p|720p|1080p] [-d 1-15]
-                                                                  text- / image- / reference-to-video
+grokcli video PROMPT [-i IMG] [--ref IMG ...] [--ref-audio VOICE ...]
+             [-r 480p|720p|1080p] [-d 1-15]                       text- / image- / reference-to-video
 grokcli video-extend VIDEO [PROMPT] [-d SECONDS]                  extend an existing video
-grokcli tts TEXT [--voice V] [--language en] [-f mp3]             text-to-speech
+grokcli video-edit VIDEO PROMPT                                   edit an existing video
+grokcli tts TEXT [--voice V] [--language en] [-f mp3] [--speed 0.7-1.5]
+             [--latency 0|1|2] [--normalize]                      text-to-speech
 grokcli voices                                                    list TTS voices
-grokcli transcribe AUDIO                                          speech-to-text (ASR)
+grokcli voice clone AUDIO [--name N] [--gender g] ...             clone a custom voice
+grokcli voice list | delete <voice_id>                            manage cloned voices
+grokcli transcribe AUDIO [--vad-threshold 0-1] [--diarize] [--keyterm K ...]
+                                                                  speech-to-text (ASR)
 
 grokcli config show | path | get KEY | set KEY VALUE              view/change saved defaults
 grokcli help [command]                                            the complete manual, in one call
@@ -135,11 +141,16 @@ Run `grokcli <command> --help` for details and examples on any command.
 
 | Mode | Flag | Model used |
 |------|------|------------|
-| Text-to-video (T2V) | *(none)* | `grok-imagine-video` |
-| Image-to-video (I2V) | `-i IMAGE` | `grok-imagine-video-1.5-preview` |
-| Reference-to-video (R2V) | `--ref IMG` (up to 7) | `grok-imagine-video` |
+| Text-to-video (T2V) | *(none)* | `grok-imagine-video-1.5` (default) |
+| Image-to-video (I2V) | `-i IMAGE` | `grok-imagine-video-1.5` |
+| Reference-to-video (R2V) | `--ref IMG` (up to 7) | `grok-imagine-video-1.5` |
+| R2V narration | `--ref-audio VOICE` (up to 3) | `grok-imagine-video-1.5` (tag voices as `<AUDIO_0>` in the prompt) |
 
-Duration is validated per model (1–15s); `1080p` exists but is subscription-tier-gated.
+`grok-imagine-video-1.5` is the unified model: T2V/I2V/R2V in one, with native
+**1080p** (T2V/I2V; R2V capped at 720p). Generation duration is 1–15s;
+`video-extend` segments are 2–10s; `video-edit` keeps the input's length
+(~8.7s cap, 720p). `-i` (I2V) and `--ref`/`--ref-audio` (R2V) are mutually
+exclusive. The base `grok-imagine-video` (T2V/R2V) is still available via `-m`.
 
 ## Output & scripting
 
@@ -165,7 +176,7 @@ Resolution order for every setting: **CLI flag > environment variable > `~/.conf
 | Disable color | `NO_COLOR` | color on a TTY |
 
 ```bash
-grokcli config set chat_model grok-4.3
+grokcli config set chat_model grok-4.5
 grokcli config set output_dir ~/Pictures/grok
 ```
 

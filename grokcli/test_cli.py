@@ -104,14 +104,17 @@ class HelpAtomicityTest(unittest.TestCase):
         for needle in ("grokcli login", "GETTING STARTED", "EXIT CODES", "EXAMPLES:", "OUTPUT", "--output"):
             self.assertIn(needle, text, needle)
         # Every command must be discoverable from the top-level help.
-        for cmd in ("chat", "search", "image", "video", "tts", "transcribe", "voices", "models", "sessions", "config", "doctor", "status", "logout"):
+        for cmd in ("chat", "search", "image", "image-edit", "video", "video-extend", "video-edit",
+                    "tts", "voices", "voice", "transcribe", "models", "sessions", "config",
+                    "doctor", "status", "logout"):
             self.assertIn(cmd, text, cmd)
 
     def test_every_command_help_has_examples(self):
         commands = [
             ["login"], ["logout"], ["status"], ["doctor"], ["chat"], ["search"],
-            ["image"], ["video"], ["tts"], ["voices"], ["transcribe"],
-            ["sessions"], ["models"], ["config"],
+            ["image"], ["image-edit"], ["video"], ["video-extend"], ["video-edit"],
+            ["tts"], ["voices"], ["voice", "clone"], ["voice", "list"], ["voice", "delete"],
+            ["transcribe"], ["sessions"], ["models"], ["config"],
         ]
         for argv in commands:
             text = self._help(argv)
@@ -213,6 +216,65 @@ class MediaDispatchTest(unittest.TestCase):
         self.assertTrue(kw["continue_session"])
         self.assertEqual(kw["session_name"], "work")
         self.assertTrue(kw["force_new"])
+
+    def test_chat_effort_and_priority_dispatched(self):
+        with mock.patch("grokcli.chat.run.run_chat", return_value=0) as run:
+            cli.main(["chat", "hi", "--effort", "low", "--priority"])
+        kw = run.call_args.kwargs
+        self.assertEqual(kw["effort"], "low")
+        self.assertTrue(kw["priority"])
+
+    def test_search_effort_dispatched(self):
+        with mock.patch("grokcli.chat.run.run_chat", return_value=0) as run:
+            cli.main(["search", "who won?", "--effort", "high"])
+        self.assertEqual(run.call_args.kwargs["effort"], "high")
+
+    def test_video_ref_audio_dispatch(self):
+        with mock.patch("grokcli.media.video.run_video", return_value=0) as run:
+            cli.main(["video", "narrate <AUDIO_0>", "--ref", "a.png", "--ref-audio", "eve", "--ref-audio", "rex"])
+        kw = run.call_args.kwargs
+        self.assertEqual(kw["reference_images"], ["a.png"])
+        self.assertEqual(kw["reference_audios"], ["eve", "rex"])
+
+    def test_video_edit_dispatch(self):
+        with mock.patch("grokcli.media.video.run_video_edit", return_value=0) as run:
+            cli.main(["video-edit", "clip.mp4", "add neon", "-m", "grok-imagine-video-1.5"])
+        kw = run.call_args.kwargs
+        self.assertEqual((kw["video"], kw["prompt"], kw["model"]), ("clip.mp4", "add neon", "grok-imagine-video-1.5"))
+
+    def test_tts_new_params_dispatch(self):
+        with mock.patch("grokcli.media.tts.run_tts", return_value=0) as run:
+            cli.main(["tts", "hi", "--speed", "0.8", "--latency", "2", "--normalize"])
+        kw = run.call_args.kwargs
+        self.assertEqual(kw["speed"], 0.8)
+        self.assertEqual(kw["latency"], 2)
+        self.assertTrue(kw["normalize"])
+
+    def test_transcribe_new_params_dispatch(self):
+        with mock.patch("grokcli.media.transcribe.run_transcribe", return_value=0) as run:
+            cli.main(["transcribe", "a.mp3", "--vad-threshold", "0.3", "--diarize", "--keyterm", "Grok"])
+        kw = run.call_args.kwargs
+        self.assertEqual(kw["vad_threshold"], 0.3)
+        self.assertTrue(kw["diarize"])
+        self.assertEqual(kw["keyterms"], ["Grok"])
+
+    def test_voice_clone_dispatch(self):
+        with mock.patch("grokcli.media.voice.run_voice_clone", return_value=0) as run:
+            cli.main(["voice", "clone", "clip.wav", "--name", "Narrator", "--gender", "neutral"])
+        kw = run.call_args.kwargs
+        self.assertEqual(kw["audio_path"], "clip.wav")
+        self.assertEqual(kw["name"], "Narrator")
+        self.assertEqual(kw["gender"], "neutral")
+
+    def test_voice_list_dispatch(self):
+        with mock.patch("grokcli.media.voice.run_voice_list", return_value=0) as run:
+            self.assertEqual(cli.main(["voice", "list"]), 0)
+        run.assert_called_once()
+
+    def test_voice_delete_dispatch(self):
+        with mock.patch("grokcli.media.voice.run_voice_delete", return_value=0) as run:
+            cli.main(["voice", "delete", "ab12cd34"])
+        self.assertEqual(run.call_args.kwargs["voice_id"], "ab12cd34")
 
 
 class SessionsCommandTest(unittest.TestCase):

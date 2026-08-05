@@ -20,9 +20,14 @@ from urllib.parse import urlparse
 from . import fsutil
 
 DEFAULT_BASE_URL = "https://api.x.ai/v1"
-DEFAULT_CHAT_MODEL = "grok-4.3"
+# grok-4.5 is the flagship chat model (500k context, reasoning effort tuning);
+# grok-imagine-video-1.5 is the unified T2V/I2V/R2V video model.
+DEFAULT_CHAT_MODEL = "grok-4.5"
 DEFAULT_IMAGE_MODEL = "grok-imagine-image-quality"
-DEFAULT_VIDEO_MODEL = "grok-imagine-video"
+DEFAULT_VIDEO_MODEL = "grok-imagine-video-1.5"
+# TTS/STT have no public model IDs; these sentinel defaults are accepted for
+# compatibility with existing configs and scripts (the TTS body no longer sends
+# a model field).
 DEFAULT_TTS_MODEL = "grok-tts"
 DEFAULT_STT_MODEL = "grok-transcribe"
 DEFAULT_TIMEOUT_SECONDS = 300.0

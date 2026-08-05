@@ -141,7 +141,7 @@ class ChatSessionTest(unittest.TestCase):
 
             captured = {}
 
-            def cap(client, *, model, messages, instructions=None, tools=None):
+            def cap(client, *, model, messages, instructions=None, tools=None, effort=None, priority=False):
                 captured["messages"] = list(messages)
                 return {"text": "A2", "citations": [], "usage": None}
 

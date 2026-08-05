@@ -1,8 +1,13 @@
 """Text-to-speech via ``POST /v1/tts`` (and voice listing via ``GET /v1/tts/voices``).
 
-Body shape verified live against api.x.ai: ``{model, text, voice, response_format}``
-(the field is ``text``, not OpenAI's ``input``). The response is raw audio bytes,
-or ``{audio: <base64>}`` if the server answers with JSON.
+Request shape (2026-08): ``{text, voice_id, language}`` plus optional
+``output_format {codec, sample_rate, bit_rate}``, ``speed`` (0.7-1.5),
+``optimize_streaming_latency`` (0/1/2) and ``text_normalization``. ``voice_id``
+takes built-in voices (see ``grokcli voices``) or a cloned custom-voice id. The
+TTS API has no ``model`` parameter — ``-m/--model`` is accepted for
+compatibility only and is not sent. Text is capped at 15,000 characters.
+The response is raw audio bytes, or ``{audio: <base64>}`` if the server answers
+with JSON.
 """
 
 from __future__ import annotations
@@ -17,21 +22,51 @@ from ..config import Settings
 from ..errors import APIError, UsageError
 from . import files
 
+TTS_MAX_TEXT_CHARS = 15_000
+# Codecs accepted by the TTS output_format object (default: mp3).
+TTS_CODECS = frozenset({"mp3", "wav", "pcm", "mulaw", "alaw"})
+TTS_LATENCY_LEVELS = frozenset({0, 1, 2})
+
 
 def synthesize(
     client: GrokClient,
     *,
     text: str,
-    model: str,
+    model: Optional[str] = None,  # accepted for compatibility; the TTS API has no model parameter
     voice: Optional[str],
     fmt: str,
     output_dir: Path,
     language: str = "en",
+    speed: Optional[float] = None,
+    optimize_streaming_latency: Optional[int] = None,
+    text_normalization: bool = False,
 ) -> Path:
     """Synthesize speech for ``text`` and save it as an audio file."""
-    payload: dict = {"model": model, "text": text, "response_format": fmt, "language": language}
+    if len(text) > TTS_MAX_TEXT_CHARS:
+        raise UsageError(
+            f"Text is {len(text)} characters; TTS accepts at most {TTS_MAX_TEXT_CHARS}.",
+            hint="Split the text into shorter chunks.",
+        )
+    payload: dict = {"text": text, "language": language}
     if voice:
-        payload["voice"] = voice
+        payload["voice_id"] = voice
+    if fmt != "mp3":
+        if fmt not in TTS_CODECS:
+            raise UsageError(f"Invalid audio format {fmt!r}.", hint=f"Choose from: {', '.join(sorted(TTS_CODECS))}")
+        payload["output_format"] = {"codec": fmt}
+    if speed is not None:
+        if not 0.7 <= float(speed) <= 1.5:
+            raise UsageError(f"Speed {speed} is out of range (0.7-1.5).", hint="Choose a multiplier within 0.7-1.5.")
+        payload["speed"] = speed
+    if optimize_streaming_latency is not None:
+        if optimize_streaming_latency not in TTS_LATENCY_LEVELS:
+            raise UsageError(
+                f"Invalid latency level {optimize_streaming_latency}.",
+                hint="Choose 0 (best quality), 1, or 2 (lowest latency).",
+            )
+        payload["optimize_streaming_latency"] = optimize_streaming_latency
+    if text_normalization:
+        payload["text_normalization"] = True
     body = json.dumps(payload).encode("utf-8")
     response = client.request(
         "POST", "/tts", body=body, headers={"Content-Type": "application/json", "Accept": "audio/*"}
@@ -82,6 +117,9 @@ def run_tts(
     model: Optional[str] = None,
     fmt: str = "mp3",
     language: str = "en",
+    speed: Optional[float] = None,
+    latency: Optional[int] = None,
+    normalize: bool = False,
     env: Optional[Mapping[str, str]] = None,
 ) -> int:
     if not text.strip():
@@ -93,10 +131,13 @@ def run_tts(
         path = synthesize(
             client,
             text=text,
-            model=model or settings.tts_model,
+            model=model,  # explicit -m only; the TTS API has no model parameter
             voice=voice or settings.tts_voice,
             fmt=fmt,
             language=language,
+            speed=speed,
+            optimize_streaming_latency=latency,
+            text_normalization=normalize,
             output_dir=settings.output_dir,
         )
     finally:

@@ -9,12 +9,14 @@ sensible defaults.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, FrozenSet
+from typing import Dict, FrozenSet, Optional
 
 # Chat / reasoning models (Responses API). Verified against GET /v1/models
-# (2026-06); ``grok-4`` also resolves as an unlisted alias.
+# (2026-08): ``grok-4.5`` is the flagship (500k context, reasoning effort
+# none/low/medium/high); ``grok-4`` also resolves as an unlisted alias.
 CHAT_MODELS: FrozenSet[str] = frozenset(
     {
+        "grok-4.5",
         "grok-4.3",
         "grok-4.20-0309-reasoning",
         "grok-4.20-0309-non-reasoning",
@@ -24,14 +26,18 @@ CHAT_MODELS: FrozenSet[str] = frozenset(
     }
 )
 
+# Configurable reasoning effort for chat models (Responses API
+# ``reasoning: {effort}``). ``none`` disables reasoning entirely.
+REASONING_EFFORTS: FrozenSet[str] = frozenset({"none", "low", "medium", "high"})
+
 IMAGE_MODELS: Dict[str, str] = {
     "grok-imagine-image": "Fast image generation (~5-10s)",
     "grok-imagine-image-quality": "Higher fidelity (~10-20s)",
 }
 
 VIDEO_MODELS: Dict[str, str] = {
+    "grok-imagine-video-1.5": "Text-, image-, and reference-to-video; native 1080p (R2V capped at 720p)",
     "grok-imagine-video": "Text-to-video and reference-to-video (R2V)",
-    "grok-imagine-video-1.5-preview": "Image-to-video (latest)",
 }
 
 # Media parameter value sets (validated client-side before hitting the API).
@@ -39,43 +45,63 @@ ASPECT_RATIOS: FrozenSet[str] = frozenset(
     {"1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"}
 )
 IMAGE_RESOLUTIONS: FrozenSet[str] = frozenset({"1k", "2k"})
-# 1080p exists but is subscription-tier-gated — allow it client-side and let the
-# API reject it ("not available for your team") rather than over-restrict here.
 VIDEO_RESOLUTIONS: FrozenSet[str] = frozenset({"480p", "720p", "1080p"})
 
 VIDEO_DURATION_MIN = 1
 VIDEO_DURATION_MAX = 15
+# Video *extension* segments are capped differently than generation (2-10s).
+VIDEO_EXTEND_DURATION_MIN = 2
+VIDEO_EXTEND_DURATION_MAX = 10
+# Preset-voice narration for reference-to-video (``reference_audios``).
+MAX_REFERENCE_AUDIOS = 3
+
+# Resolution ordering, used to compare e.g. "R2V capped at 720p".
+_RESOLUTION_RANK = {"480p": 0, "720p": 1, "1080p": 2}
 
 
 @dataclass(frozen=True)
 class VideoModelSpec:
     """Per-model video capabilities and limits.
 
-    Values verified live against the API (2026-06): both shipping models validate
-    duration 1-15s at submit; the base model supports reference-to-video while the
-    1.5-preview supports image-to-video. The API remains the final authority — this
-    table catches obvious mistakes early and routes capability errors with guidance,
-    but never blocks a value the API would actually accept.
+    Values verified against the xAI docs (2026-08): generation is 1-15s,
+    extension segments 2-10s; the 1.5 model is the unified T2V/I2V/R2V model
+    with native 1080p for T2V/I2V (R2V capped at 720p) and preset-voice
+    narration; the base model is T2V/R2V only. The API remains the final
+    authority — this table catches obvious mistakes early and routes capability
+    errors with guidance, but never blocks a value the API would accept.
     """
 
     min_duration: int = VIDEO_DURATION_MIN
     max_duration: int = VIDEO_DURATION_MAX
+    min_extend_duration: int = VIDEO_EXTEND_DURATION_MIN
+    max_extend_duration: int = VIDEO_EXTEND_DURATION_MAX
     resolutions: FrozenSet[str] = VIDEO_RESOLUTIONS
     aspect_ratios: FrozenSet[str] = ASPECT_RATIOS
-    supports_image: bool = True       # image-to-video (first-frame)
+    supports_image: bool = True       # image-to-video (first frame)
     supports_reference: bool = True   # reference-to-video (R2V)
+    r2v_max_resolution: Optional[str] = None  # R2V resolution cap, e.g. "720p"
+    max_reference_audios: int = MAX_REFERENCE_AUDIOS  # 0 = preset voices unsupported
 
 
 VIDEO_MODEL_SPECS: Dict[str, "VideoModelSpec"] = {
-    # Base model: text-to-video + reference-to-video; rejects a first-frame image.
-    "grok-imagine-video": VideoModelSpec(supports_image=False, supports_reference=True),
-    # Preview model: image-to-video; rejects reference_images (HTTP 400, verified live).
-    "grok-imagine-video-1.5-preview": VideoModelSpec(supports_image=True, supports_reference=False),
+    # 1.5 (current flagship): all three modes + preset-voice R2V narration;
+    # native 1080p for T2V/I2V, R2V capped at 720p.
+    "grok-imagine-video-1.5": VideoModelSpec(r2v_max_resolution="720p"),
+    # Base model: text-to-video + reference-to-video; rejects a first-frame
+    # image and preset-voice narration.
+    "grok-imagine-video": VideoModelSpec(
+        supports_image=False, max_reference_audios=0
+    ),
 }
 # Unknown/future models: permissive — let the API be the authority.
-DEFAULT_VIDEO_SPEC = VideoModelSpec(supports_image=True, supports_reference=True)
+DEFAULT_VIDEO_SPEC = VideoModelSpec()
 
 
 def video_spec(model: str) -> "VideoModelSpec":
     """Return the capability spec for ``model`` (permissive default if unknown)."""
     return VIDEO_MODEL_SPECS.get(model, DEFAULT_VIDEO_SPEC)
+
+
+def resolution_rank(resolution: str) -> int:
+    """Order resolutions for capability caps; unknown values rank highest."""
+    return _RESOLUTION_RANK.get(resolution, 10)

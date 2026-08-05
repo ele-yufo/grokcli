@@ -30,6 +30,8 @@ def run_chat(
     continue_session: bool = False,
     session_name: Optional[str] = None,
     force_new: bool = False,
+    effort: Optional[str] = None,
+    priority: bool = False,
 ) -> int:
     """Run a single-turn chat completion (optionally continuing a session)."""
     prompt = prompt.strip()
@@ -48,7 +50,10 @@ def run_chat(
     messages = prior + [{"role": "user", "content": prompt}]
 
     if settings.output_format == "json" or not stream:
-        result = api.complete(client, model=model, messages=messages, instructions=effective_system, tools=tools)
+        result = api.complete(
+            client, model=model, messages=messages, instructions=effective_system,
+            tools=tools, effort=effort, priority=priority,
+        )
         answer, citations = result["text"], result["citations"]
         output.emit_result(
             settings.output_format,
@@ -57,7 +62,10 @@ def run_chat(
         )
         _print_citations(citations, settings)
     else:
-        chat_stream = api.ChatStream(client, model=model, messages=messages, instructions=effective_system, tools=tools)
+        chat_stream = api.ChatStream(
+            client, model=model, messages=messages, instructions=effective_system,
+            tools=tools, effort=effort, priority=priority,
+        )
         streamed_any = False
         for delta in chat_stream:
             sys.stdout.write(delta)
@@ -112,6 +120,8 @@ def run_repl(
     continue_session: bool = False,
     session_name: Optional[str] = None,
     force_new: bool = False,
+    effort: Optional[str] = None,
+    priority: bool = False,
 ) -> int:
     """Interactive multi-turn chat (persisted + resumable). Requires a TTY."""
     if not _stdin_is_tty():
@@ -156,7 +166,10 @@ def run_repl(
 
         history.append({"role": "user", "content": message})
         try:
-            answer = _exchange(client, model=model, history=history, system=system, stream=stream, tools=tools, style=style)
+            answer = _exchange(
+                client, model=model, history=history, system=system, stream=stream,
+                tools=tools, style=style, effort=effort, priority=priority,
+            )
         except GrokError as exc:
             # Keep the REPL alive on a failed turn; drop the dangling user message.
             history.pop()
@@ -169,17 +182,24 @@ def run_repl(
         session.save(sess, env)
 
 
-def _exchange(client, *, model, history, system, stream, tools, style) -> str:
+def _exchange(client, *, model, history, system, stream, tools, style,
+              effort=None, priority=False) -> str:
     sys.stdout.write(style.green("Grok ▸ "))
     sys.stdout.flush()
     if stream:
-        chat_stream = api.ChatStream(client, model=model, messages=history, instructions=system, tools=tools)
+        chat_stream = api.ChatStream(
+            client, model=model, messages=history, instructions=system,
+            tools=tools, effort=effort, priority=priority,
+        )
         for delta in chat_stream:
             sys.stdout.write(delta)
             sys.stdout.flush()
         sys.stdout.write("\n")
         return chat_stream.text
-    result = api.complete(client, model=model, messages=history, instructions=system, tools=tools)
+    result = api.complete(
+        client, model=model, messages=history, instructions=system,
+        tools=tools, effort=effort, priority=priority,
+    )
     output.stdout(result["text"])
     return result["text"]
 

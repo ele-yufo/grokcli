@@ -4,13 +4,17 @@ Request shape (verified against the official Grok CLI and Moore's grok-cli):
 
     POST /v1/responses
     {"model", "input": [{"role", "content"}], "instructions"?, "stream",
-     "store": false, "tools"?, "tool_choice"?, "parallel_tool_calls"?}
+     "store": false, "tools"?, "tool_choice"?, "parallel_tool_calls"?,
+     "reasoning": {"effort"}?, "service_tier"?}
 
-The response carries an ``output[]`` array; assistant text lives in items of
-type ``message`` under ``content[].type == "output_text"``. Streaming arrives as
-SSE events whose data is JSON; text deltas appear on ``*.output_text.delta``
-events. Parsing here is intentionally tolerant of minor shape differences (and
-also accepts an OpenAI ``chat/completions`` shape as a fallback).
+``reasoning.effort`` (none/low/medium/high) tunes how hard a reasoning model
+thinks before responding (grok-4.5 and later); ``service_tier: "priority"``
+requests priority processing. The response carries an ``output[]`` array;
+assistant text lives in items of type ``message`` under
+``content[].type == "output_text"``. Streaming arrives as SSE events whose data
+is JSON; text deltas appear on ``*.output_text.delta`` events. Parsing here is
+intentionally tolerant of minor shape differences (and also accepts an OpenAI
+``chat/completions`` shape as a fallback).
 """
 
 from __future__ import annotations
@@ -18,9 +22,23 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence
 
+from .. import models
 from ..client import GrokClient
+from ..errors import UsageError
 
 RESPONSES_PATH = "/responses"
+
+
+def _validated_effort(effort: Optional[str]) -> Optional[str]:
+    """Validate a reasoning-effort value against the known set."""
+    if effort is None:
+        return None
+    if effort not in models.REASONING_EFFORTS:
+        raise UsageError(
+            f"Invalid reasoning effort {effort!r}.",
+            hint=f"Choose from: {', '.join(sorted(models.REASONING_EFFORTS))}.",
+        )
+    return effort
 
 
 def build_payload(
@@ -31,6 +49,8 @@ def build_payload(
     stream: bool = False,
     tools: Optional[List[Dict[str, Any]]] = None,
     store: bool = False,
+    effort: Optional[str] = None,
+    priority: bool = False,
 ) -> Dict[str, Any]:
     """Assemble the Responses API request body."""
     payload: Dict[str, Any] = {
@@ -45,6 +65,11 @@ def build_payload(
         payload["tools"] = tools
         payload["tool_choice"] = "auto"
         payload["parallel_tool_calls"] = True
+    effort = _validated_effort(effort)
+    if effort:
+        payload["reasoning"] = {"effort": effort}
+    if priority:
+        payload["service_tier"] = "priority"
     return payload
 
 
@@ -55,9 +80,14 @@ def complete(
     messages: Sequence[Mapping[str, str]],
     instructions: Optional[str] = None,
     tools: Optional[List[Dict[str, Any]]] = None,
+    effort: Optional[str] = None,
+    priority: bool = False,
 ) -> Dict[str, Any]:
     """Non-streaming completion. Returns ``{text, citations, usage, raw}``."""
-    payload = build_payload(model=model, messages=messages, instructions=instructions, tools=tools, stream=False)
+    payload = build_payload(
+        model=model, messages=messages, instructions=instructions, tools=tools,
+        stream=False, effort=effort, priority=priority,
+    )
     raw = client.request_json("POST", RESPONSES_PATH, json_body=payload)
     return {
         "text": extract_text(raw),
@@ -82,9 +112,12 @@ class ChatStream:
         messages: Sequence[Mapping[str, str]],
         instructions: Optional[str] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
+        effort: Optional[str] = None,
+        priority: bool = False,
     ) -> None:
         self._payload = build_payload(
-            model=model, messages=messages, instructions=instructions, tools=tools, stream=True
+            model=model, messages=messages, instructions=instructions, tools=tools,
+            stream=True, effort=effort, priority=priority,
         )
         self._client = client
         self.text = ""

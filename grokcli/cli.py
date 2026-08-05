@@ -37,8 +37,10 @@ GETTING STARTED (do this first — nothing works until you are logged in):
 CAPABILITIES:
   chat        converse with Grok: one-shot, from stdin, or an interactive REPL; resumable
   search      X (Twitter) + web search answered by Grok, with citations
-  image       generate images           video       generate videos (text- or image-to-video)
-  tts         text-to-speech            transcribe  speech-to-text
+  image       generate images           image-edit  edit existing images
+  video       generate videos (T2V/I2V/R2V)    video-edit  edit a video
+  video-extend  extend a video          tts         text-to-speech
+  voice       clone / list / delete custom voices   transcribe  speech-to-text
   models      list available models     voices      list TTS voices
   sessions    manage saved chats        config      view/change saved defaults
   status      show login state          doctor      health check     logout  sign out
@@ -221,6 +223,8 @@ def _add_chat_commands(sub, parent) -> None:
     chat.add_argument("-c", "--continue", dest="continue_session", action="store_true", help="continue the most recent conversation")
     chat.add_argument("--session", default=None, help="continue/create a named session")
     chat.add_argument("--new", action="store_true", help="start a fresh session (ignore -c)")
+    chat.add_argument("--effort", default=None, help="reasoning effort: none, low, medium, high (default: model default)")
+    chat.add_argument("--priority", action="store_true", help="request priority processing (service_tier)")
     chat.set_defaults(func=_cmd_chat)
 
     search = _sub(
@@ -242,6 +246,7 @@ def _add_chat_commands(sub, parent) -> None:
     search.add_argument("--no-web", action="store_true", help="disable web search")
     search.add_argument("--no-x", action="store_true", help="disable X search")
     search.add_argument("--no-stream", action="store_true", help="wait for the full reply")
+    search.add_argument("--effort", default=None, help="reasoning effort: none, low, medium, high (default: model default)")
     search.set_defaults(func=_cmd_search)
 
 
@@ -271,26 +276,33 @@ def _add_media_commands(sub, parent) -> None:
         help_text="generate a video (text-, image-, or reference-to-video)",
         description=(
             "Generate a video: the job is submitted, polled until ready, then downloaded to\n"
-            "./grokcli-output/. Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3. Resolution: 480p/720p/1080p\n"
-            "(1080p is subscription-tier-gated). Duration 1-15s (validated per model, not clamped).\n"
-            "  text-to-video (T2V):       just give a prompt          (grok-imagine-video)\n"
-            "  image-to-video (I2V):      -i IMAGE  animate a start image (grok-imagine-video-1.5-preview)\n"
-            "  reference-to-video (R2V):  --ref IMG style/subject refs, up to 7, repeatable (grok-imagine-video)"
+            "./grokcli-output/. The default model grok-imagine-video-1.5 handles all three modes\n"
+            "with native 1080p (T2V/I2V; R2V is capped at 720p). Aspect: 1:1 16:9 9:16 4:3 3:4 3:2 2:3.\n"
+            "Resolution: 480p/720p/1080p. Duration 1-15s (validated per model, not clamped).\n"
+            "  text-to-video (T2V):       just give a prompt\n"
+            "  image-to-video (I2V):      -i IMAGE  animate a start image\n"
+            "  reference-to-video (R2V):  --ref IMG style/subject refs, repeatable\n"
+            "  R2V narration:             --ref-audio VOICE preset voice, max 3; tag in the prompt\n"
+            "                             as <AUDIO_0>, <AUDIO_1>, ... (1.5 only)\n"
+            "I2V (-i) and R2V (--ref / --ref-audio) are mutually exclusive."
         ),
         epilog=(
             "EXAMPLES:\n"
-            '  grokcli video "a calm ocean wave at sunset" -d 6 -r 720p\n'
+            '  grokcli video "a calm ocean wave at sunset" -d 6 -r 1080p\n'
             '  grokcli video "gently animate this portrait" -i photo.png\n'
-            '  grokcli video "a character in this style, walking" --ref a.png --ref b.png'
+            '  grokcli video "a character in this style, walking" --ref a.png --ref b.png\n'
+            '  grokcli video "a chef narrates: <AUDIO_0> the recipe" --ref dish.jpg --ref-audio eve'
         ),
     )
     video.add_argument("prompt", help="video description")
     video.add_argument("-i", "--image", default=None, help="starting image for image-to-video (I2V)")
     video.add_argument("--ref", dest="reference_images", action="append", default=None,
-                       help="reference image for reference-to-video (R2V); repeatable, up to 7")
-    video.add_argument("-m", "--model", default=None, help="video model (auto-selects 1.5-preview with -i/--ref)")
+                       help="reference image for reference-to-video (R2V); repeatable")
+    video.add_argument("--ref-audio", dest="reference_audios", action="append", default=None,
+                       help="preset voice for R2V narration; repeatable, max 3 (1.5 only)")
+    video.add_argument("-m", "--model", default=None, help="video model (default grok-imagine-video-1.5)")
     video.add_argument("-a", "--aspect", default="16:9", help="aspect ratio (default 16:9)")
-    video.add_argument("-r", "--resolution", default="720p", help="480p/720p/1080p (1080p tier-gated; default 720p)")
+    video.add_argument("-r", "--resolution", default="720p", help="480p/720p/1080p (R2V capped at 720p; default 720p)")
     video.add_argument("-d", "--duration", type=int, default=8, help="seconds, 1-15 (default 8)")
     video.set_defaults(func=_cmd_video)
 
@@ -323,7 +335,8 @@ def _add_media_commands(sub, parent) -> None:
         description=(
             "Extend a video by appending more generated footage (POST /videos/extensions);\n"
             "submitted, polled, then downloaded to ./grokcli-output/. The input may be a local\n"
-            "video file or an http(s) URL. An optional prompt steers the continuation."
+            "video file or an http(s) URL. An optional prompt steers the continuation.\n"
+            "Extension segments are 2-10s (the API range for this endpoint)."
         ),
         epilog=(
             "EXAMPLES:\n"
@@ -333,28 +346,52 @@ def _add_media_commands(sub, parent) -> None:
     )
     video_extend.add_argument("video", help="path or URL of the video to extend")
     video_extend.add_argument("prompt", nargs="?", default=None, help="optional continuation prompt")
-    video_extend.add_argument("-m", "--model", default=None, help="video model (default grok-imagine-video)")
-    video_extend.add_argument("-d", "--duration", type=int, default=6, help="seconds to add, 1-15 (default 6)")
+    video_extend.add_argument("-m", "--model", default=None, help="video model (default grok-imagine-video; 1.5 rejects this endpoint)")
+    video_extend.add_argument("-d", "--duration", type=int, default=6, help="seconds to add, 2-10 (default 6)")
     video_extend.set_defaults(func=_cmd_video_extend)
+
+    video_edit = _sub(
+        sub, "video-edit", parent,
+        help_text="edit an existing video",
+        description=(
+            "Edit an existing video guided by a prompt (POST /videos/edits); submitted, polled,\n"
+            "then downloaded to ./grokcli-output/. The input may be a local video file or an\n"
+            "http(s) URL. The output keeps the input's length (capped at ~8.7s) and is capped\n"
+            "at 720p."
+        ),
+        epilog=(
+            "EXAMPLES:\n"
+            '  grokcli video-edit clip.mp4 "add a neon glow to the skyline"'
+        ),
+    )
+    video_edit.add_argument("video", help="path or URL of the video to edit")
+    video_edit.add_argument("prompt", help="edit instruction")
+    video_edit.add_argument("-m", "--model", default=None, help="video model (default grok-imagine-video; 1.5 rejects this endpoint)")
+    video_edit.set_defaults(func=_cmd_video_edit)
 
     tts = _sub(
         sub, "tts", parent,
         help_text="text-to-speech (save an audio file)",
         description=(
             "Synthesize speech from text and save it to ./grokcli-output/ (path printed to\n"
-            "stdout). List available voice ids with `grokcli voices`."
+            "stdout). List available voice ids with `grokcli voices`; cloned custom voices\n"
+            "(`grokcli voice clone`) work here too. Text is capped at 15,000 characters."
         ),
         epilog=(
             "EXAMPLES:\n"
             '  grokcli tts "Hello from Grok" --voice Rex\n'
-            '  grokcli tts "Bonjour le monde" --language fr -f wav'
+            '  grokcli tts "Bonjour le monde" --language fr -f wav\n'
+            '  grokcli tts "slow and clear" --speed 0.8 --latency 2'
         ),
     )
     tts.add_argument("text", help="text to speak")
     tts.add_argument("--voice", default=None, help="voice id (see `grokcli voices`)")
     tts.add_argument("--language", default="en", help="language code (default en)")
-    tts.add_argument("-m", "--model", default=None, help="TTS model (default grok-tts)")
-    tts.add_argument("-f", "--format", default="mp3", dest="fmt", help="audio format (default mp3)")
+    tts.add_argument("-m", "--model", default=None, help="accepted for compatibility; the TTS API has no model parameter")
+    tts.add_argument("-f", "--format", default="mp3", dest="fmt", help="audio format: mp3 wav pcm mulaw alaw (default mp3)")
+    tts.add_argument("--speed", type=float, default=None, help="speech rate multiplier, 0.7-1.5 (default 1.0)")
+    tts.add_argument("--latency", type=int, default=None, help="streaming latency level: 0 best quality, 1, 2 lowest (default 0)")
+    tts.add_argument("--normalize", action="store_true", help="expand numbers/abbreviations into spoken form")
     tts.set_defaults(func=_cmd_tts)
 
     voices = _sub(
@@ -368,16 +405,68 @@ def _add_media_commands(sub, parent) -> None:
     transcribe = _sub(
         sub, "transcribe", parent,
         help_text="transcribe an audio file to text (ASR)",
-        description="Transcribe a local audio file to text (printed to stdout).",
+        description=(
+            "Transcribe a local audio file to text (printed to stdout). Audio formats:\n"
+            "WAV, MP3, OGG, Opus, FLAC, AAC, MP4, M4A, MKV (auto-detected)."
+        ),
         epilog=(
             "EXAMPLES:\n"
             "  grokcli transcribe meeting.mp3\n"
-            "  grokcli transcribe note.wav --output json"
+            "  grokcli transcribe call.wav --diarize --vad-threshold 0.3\n"
+            "  grokcli transcribe note.wav --language en --keyterm Grok --keyterm API --output json"
         ),
     )
     transcribe.add_argument("audio", help="path to an audio file")
     transcribe.add_argument("-m", "--model", default=None, help="transcription model (default grok-transcribe)")
+    transcribe.add_argument("--vad-threshold", type=float, default=None,
+                            help="voice-activity gate, 0.0-1.0 (0 disables it; default 0.5)")
+    transcribe.add_argument("--language", default=None,
+                            help="language code for formatting (e.g. en); transcribes any language regardless")
+    transcribe.add_argument("--diarize", action="store_true", help="label each word with a speaker")
+    transcribe.add_argument("--keyterm", action="append", default=None,
+                            help="key terms to recognize; repeatable (max 100 terms, 50 chars each)")
     transcribe.set_defaults(func=_cmd_transcribe)
+
+    voice = _sub(
+        sub, "voice", parent,
+        help_text="clone, list, or delete custom voices",
+        description=(
+            "Manage custom (cloned) voices via the Custom Voices API. A clone uses a reference\n"
+            "clip (max 120s; WAV recommended) and the returned voice_id works everywhere a\n"
+            "built-in voice does — `grokcli tts --voice <id>` included. Note: cloning is\n"
+            "currently US-only and gated to Enterprise plans; a 403 means your tier cannot\n"
+            "create voices (listing may still work)."
+        ),
+        epilog=(
+            "EXAMPLES:\n"
+            '  grokcli voice clone my_clip.wav --name "Narrator"\n'
+            "  grokcli voice list\n"
+            "  grokcli voice delete <voice_id>\n"
+            '  grokcli tts "hello" --voice <voice_id>     # use a cloned voice'
+        ),
+    )
+    voice_sub = voice.add_subparsers(dest="voice_action", metavar="<action>")
+    clone_p = _sub(voice_sub, "clone", parent, help_text="clone a voice from a reference clip",
+                   description="Clone a voice from an audio clip (max 120s; WAV recommended).",
+                   epilog="EXAMPLES:\n  grokcli voice clone clip.wav --name Narrator --gender neutral")
+    clone_p.add_argument("audio", help="path to the reference clip")
+    clone_p.add_argument("--name", default=None, help="voice name")
+    clone_p.add_argument("--description", default=None, help="voice description")
+    clone_p.add_argument("--gender", default=None, choices=["male", "female", "neutral"], help="speaker gender")
+    clone_p.add_argument("--accent", default=None, help="speaker accent")
+    clone_p.add_argument("--age", default=None, help="speaker age")
+    clone_p.add_argument("--language", default=None, help="language (e.g. en)")
+    clone_p.add_argument("--tone", default=None, help="voice tone")
+    clone_p.set_defaults(func=_cmd_voice_clone)
+    _sub(voice_sub, "list", parent, help_text="list cloned voices",
+         description="List the custom voices on your team.",
+         epilog="EXAMPLES:\n  grokcli voice list").set_defaults(func=_cmd_voice_list)
+    delete_p = _sub(voice_sub, "delete", parent, help_text="delete a cloned voice",
+                    description="Delete a custom voice by its voice_id.",
+                    epilog="EXAMPLES:\n  grokcli voice delete abc12345")
+    delete_p.add_argument("voice_id", help="the voice_id to delete")
+    delete_p.set_defaults(func=_cmd_voice_delete)
+    voice.set_defaults(func=_cmd_voice_list)
 
 
 def _add_sessions_command(sub, parent) -> None:
@@ -571,10 +660,12 @@ def _cmd_chat(args, settings) -> int:
     }
     if prompt is None:
         return run.run_repl(
-            settings, model=model, system=args.system, stream=not args.no_stream, tools=tools, **session_kwargs
+            settings, model=model, system=args.system, stream=not args.no_stream, tools=tools,
+            effort=args.effort, priority=args.priority, **session_kwargs
         )
     return run.run_chat(
-        settings, prompt=prompt, model=model, system=args.system, stream=not args.no_stream, tools=tools, **session_kwargs
+        settings, prompt=prompt, model=model, system=args.system, stream=not args.no_stream, tools=tools,
+        effort=args.effort, priority=args.priority, **session_kwargs
     )
 
 
@@ -589,7 +680,8 @@ def _cmd_search(args, settings) -> int:
         "current, accurate information, and cite your sources."
     )
     return run.run_chat(
-        settings, prompt=args.query, model=model, system=instructions, stream=not args.no_stream, tools=tools
+        settings, prompt=args.query, model=model, system=instructions, stream=not args.no_stream,
+        tools=tools, effort=args.effort,
     )
 
 
@@ -622,6 +714,7 @@ def _cmd_video(args, settings) -> int:
         duration=args.duration,
         image=args.image,
         reference_images=args.reference_images,
+        reference_audios=args.reference_audios,
     )
 
 
@@ -647,11 +740,20 @@ def _cmd_video_extend(args, settings) -> int:
     )
 
 
+def _cmd_video_edit(args, settings) -> int:
+    from .media import video
+
+    return video.run_video_edit(
+        settings, video=args.video, prompt=args.prompt, model=args.model
+    )
+
+
 def _cmd_tts(args, settings) -> int:
     from .media import tts
 
     return tts.run_tts(
-        settings, text=args.text, voice=args.voice, model=args.model, fmt=args.fmt, language=args.language
+        settings, text=args.text, voice=args.voice, model=args.model, fmt=args.fmt, language=args.language,
+        speed=args.speed, latency=args.latency, normalize=args.normalize,
     )
 
 
@@ -661,10 +763,36 @@ def _cmd_voices(args, settings) -> int:
     return tts.run_voices(settings)
 
 
+def _cmd_voice_clone(args, settings) -> int:
+    from .media import voice
+
+    return voice.run_voice_clone(
+        settings, audio_path=args.audio, name=args.name, description=args.description,
+        gender=args.gender, accent=args.accent, age=args.age,
+        language=args.language, tone=args.tone,
+    )
+
+
+def _cmd_voice_list(args, settings) -> int:
+    from .media import voice
+
+    return voice.run_voice_list(settings)
+
+
+def _cmd_voice_delete(args, settings) -> int:
+    from .media import voice
+
+    return voice.run_voice_delete(settings, voice_id=args.voice_id)
+
+
 def _cmd_transcribe(args, settings) -> int:
     from .media import transcribe
 
-    return transcribe.run_transcribe(settings, audio_path=args.audio, model=args.model)
+    return transcribe.run_transcribe(
+        settings, audio_path=args.audio, model=args.model,
+        vad_threshold=args.vad_threshold, language=args.language,
+        diarize=args.diarize, keyterms=args.keyterm,
+    )
 
 
 def _cmd_sessions_list(args, settings) -> int:

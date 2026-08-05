@@ -120,5 +120,44 @@ class ChatStreamTest(unittest.TestCase):
         self.assertEqual(result["usage"], {"total_tokens": 9})
 
 
+class ReasoningEffortAndPriorityTest(unittest.TestCase):
+    """reasoning.effort and service_tier plumbing (grok-4.5 era)."""
+
+    def _payload(self, **over):
+        kw = {"model": "grok-4.5", "messages": [{"role": "user", "content": "hi"}]}
+        kw.update(over)
+        return api.build_payload(**kw)
+
+    def test_effort_adds_reasoning_object(self):
+        self.assertEqual(self._payload(effort="medium")["reasoning"], {"effort": "medium"})
+
+    def test_no_effort_sends_no_reasoning(self):
+        self.assertNotIn("reasoning", self._payload())
+
+    def test_priority_adds_service_tier(self):
+        self.assertEqual(self._payload(priority=True)["service_tier"], "priority")
+
+    def test_no_priority_sends_no_service_tier(self):
+        self.assertNotIn("service_tier", self._payload())
+
+    def test_invalid_effort_rejected(self):
+        from grokcli.errors import UsageError
+
+        with self.assertRaises(UsageError):
+            self._payload(effort="insane")
+
+    def test_effort_and_priority_combine(self):
+        payload = self._payload(effort="high", priority=True)
+        self.assertEqual(payload["reasoning"], {"effort": "high"})
+        self.assertEqual(payload["service_tier"], "priority")
+
+    def test_streaming_payload_carries_effort(self):
+        stream = api.ChatStream(
+            _FakeClient(events=[]), model="grok-4.5",
+            messages=[{"role": "user", "content": "hi"}], effort="low",
+        )
+        self.assertEqual(stream._payload["reasoning"], {"effort": "low"})
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
