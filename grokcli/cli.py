@@ -323,7 +323,7 @@ def _add_media_commands(sub, parent) -> None:
     image_edit.add_argument("prompt", help="how to edit the image(s)")
     image_edit.add_argument("-i", "--image", dest="sources", action="append", default=None,
                             help="source image (local path or URL); repeatable, up to 3")
-    image_edit.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image)")
+    image_edit.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-quality)")
     image_edit.add_argument("-a", "--aspect", default=None, help="aspect ratio (default: follow input / auto)")
     image_edit.add_argument("-r", "--resolution", default=None, help="resolution: 1k or 2k (default: model default)")
     image_edit.add_argument("-n", "--count", type=int, default=1, help="number of variations (default 1)")

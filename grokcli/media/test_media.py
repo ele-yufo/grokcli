@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict
 from unittest import mock
 
+from grokcli import models
 from grokcli.client import GrokClient
 from grokcli.config import resolve_settings
 from grokcli.errors import APIError, ContentFilterError, RequestTimeoutError, UsageError
@@ -302,6 +303,21 @@ class ImageEditTest(unittest.TestCase):
         client = _client("/tmp")
         with self.assertRaises(UsageError):
             image.edit_image(client, prompt="x", sources=["a", "b", "c", "d"], model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+
+    def test_edit_limit_is_per_model(self):
+        # Default cap is 3; a registered model can raise it (Imagine Image 2.0
+        # advertises multi-reference editing with up to 5).
+        self.assertEqual(models.image_edit_max_sources("unknown-model"), 3)
+        with self.assertRaises(UsageError):
+            image.edit_image(_client("/tmp"), prompt="x", sources=["a"] * 4, model="m",
+                             aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+        with mock.patch.dict(models.IMAGE_EDIT_MAX_SOURCES, {"grok-imagine-image-2": 5}):
+            self.assertEqual(models.image_edit_max_sources("grok-imagine-image-2"), 5)
+            client = _client("/tmp")
+            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+            image.edit_image(client, prompt="x", sources=["a"] * 5, model="grok-imagine-image-2",
+                             aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+            self.assertEqual(len(client.request_json.call_args.kwargs["json_body"]["images"]), 5)
 
     def test_url_source_passes_through(self):
         with tempfile.TemporaryDirectory() as tmp:

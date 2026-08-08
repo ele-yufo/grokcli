@@ -28,7 +28,8 @@
 
 ## 图像
 
-- `image`：生成；`image-edit`：按提示改 1-3 张源图（本地路径或 URL）。
+- `image`：生成（默认 `grok-imagine-image-quality`）；`image-edit`：按提示改源图（默认 **quality** 模型，`-m grok-imagine-image` 可回退 fast），1-3 张源图（本地路径或 URL）。
+- 源图上限按模型表驱动（`models.image_edit_max_sources`）：当前 API 全部 3 张；**Imagine Image 2.0**（2026-08-07 发布，消费端 Quality Mode，API 未上线）公布模型 id 后注册为 5 张 multi-ref——届时 CLI 零改动生效。
 - 输出 `./grokcli-output/<时间戳>_<slug>.png`（当前工作目录下），路径打印在 stdout。
 
 ## 语音

@@ -35,6 +35,23 @@ IMAGE_MODELS: Dict[str, str] = {
     "grok-imagine-image-quality": "Higher fidelity (~10-20s)",
 }
 
+# Next-gen image model — Grok "Imagine Image 2.0" (announced 2026-08-07,
+# https://x.ai/news/grok-imagine-image-2). It went live on the consumer side
+# as the new Quality Mode (grok.com/imagine, iOS/Android); the announcement
+# said "API access coming soon", and GET /v1/models still has no new image
+# ID. When the ID lands, register it here and in IMAGE_EDIT_MAX_SOURCES
+# (2.0 advertises multi-reference editing with up to 5 source images), then
+# re-evaluate DEFAULT_IMAGE_MODEL / DEFAULT_EDIT_MODEL in media/image.py.
+IMAGE_EDIT_MAX_SOURCES: Dict[str, int] = {
+    # All current models accept 3. Imagine Image 2.0 → 5 (API pending).
+}
+MAX_EDIT_SOURCES = 3
+
+
+def image_edit_max_sources(model: str) -> int:
+    """Max source images ``/images/edits`` accepts for ``model``."""
+    return IMAGE_EDIT_MAX_SOURCES.get(model, MAX_EDIT_SOURCES)
+
 VIDEO_MODELS: Dict[str, str] = {
     "grok-imagine-video-1.5": "Text-, image-, and reference-to-video; native 1080p (R2V capped at 720p)",
     "grok-imagine-video": "Text-to-video and reference-to-video (R2V)",

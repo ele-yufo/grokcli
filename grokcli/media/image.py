@@ -63,8 +63,9 @@ def edit_image(
     """
     if not sources:
         raise UsageError("image-edit needs at least one source image.", hint="Pass one with -i: grokcli image-edit \"...\" -i photo.png")
-    if len(sources) > 3:
-        raise UsageError("image-edit accepts at most 3 source images.")
+    limit = models.image_edit_max_sources(model)
+    if len(sources) > limit:
+        raise UsageError(f"image-edit accepts at most {limit} source images.")
     payload: dict = {
         "model": model,
         "prompt": prompt,
@@ -137,7 +138,10 @@ def run_image(
     return 0
 
 
-DEFAULT_EDIT_MODEL = "grok-imagine-image"
+# Quality tier by default: the xAI docs use grok-imagine-image-quality for
+# edits, and it matches the consumer-side Quality Mode (Imagine Image 2.0
+# line). Switch back with -m grok-imagine-image.
+DEFAULT_EDIT_MODEL = "grok-imagine-image-quality"
 
 
 def run_image_edit(
