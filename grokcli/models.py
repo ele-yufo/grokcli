@@ -12,15 +12,13 @@ from dataclasses import dataclass
 from typing import Dict, FrozenSet, Optional
 
 # Chat / reasoning models (Responses API). Verified against GET /v1/models
-# (2026-08): ``grok-4.5`` is the flagship (500k context, reasoning effort
-# none/low/medium/high); ``grok-4`` also resolves as an unlisted alias.
+# (2026-08): ``grok-4.5`` is the flagship SOTA (500k context, reasoning effort
+# none/low/medium/high); ``grok-4`` also resolves as an unlisted alias. The
+# grok-4.2 beta family (grok-4.20-*) was dropped from this catalog as stale.
 CHAT_MODELS: FrozenSet[str] = frozenset(
     {
         "grok-4.5",
         "grok-4.3",
-        "grok-4.20-0309-reasoning",
-        "grok-4.20-0309-non-reasoning",
-        "grok-4.20-multi-agent-0309",
         "grok-build-0.1",
         "grok-4",
     }
