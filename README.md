@@ -149,6 +149,16 @@ grokcli help [command]                                            the complete m
 
 Run `grokcli <command> --help` for details and examples on any command.
 
+### 🎨 Image models
+
+`grok-imagine-image-2.0` is the default for both `image` and `image-edit` —
+the Imagine Image 2.0 model: sharp typography, strong prompt adherence, and
+multi-reference editing (tag sources in the prompt as `<IMAGE_0>`, `<IMAGE_1>`,
+`<IMAGE_2>`). The older tiers remain one `-m` away: `grok-imagine-image-quality`
+(slower, higher fidelity) and `grok-imagine-image` (fast). Generation and edits
+accept up to 10 images per request and wide/phone aspect ratios — `9:19.5`,
+`19.5:9`, `9:20`, `20:9`, `1:2`, `2:1`, plus `auto`.
+
 ### 🎬 Video modes
 
 | Mode | Flag | Model used |

@@ -265,10 +265,13 @@ def _add_media_commands(sub, parent) -> None:
         ),
     )
     image.add_argument("prompt", help="image description")
-    image.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-quality)")
-    image.add_argument("-a", "--aspect", default="1:1", help="aspect ratio: 1:1 16:9 9:16 4:3 3:4 3:2 2:3 (default 1:1)")
+    image.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-2.0)")
+    image.add_argument("-a", "--aspect", default="1:1",
+                       help="aspect ratio: 1:1 16:9 9:16 4:3 3:4 3:2 2:3 9:19.5 19.5:9 9:20 20:9 1:2 2:1 auto (default 1:1)")
     image.add_argument("-r", "--resolution", default="2k", help="resolution: 1k or 2k (default 2k)")
-    image.add_argument("-n", "--count", type=int, default=1, help="number of images (default 1)")
+    image.add_argument("-n", "--count", type=int, default=1, help="number of images, up to 10 (default 1)")
+    image.add_argument("--response-format", default=None, choices=["url", "b64_json"],
+                       help="delivery shape from the API (default url; b64_json saves one round-trip)")
     image.set_defaults(func=_cmd_image)
 
     video = _sub(
@@ -320,13 +323,15 @@ def _add_media_commands(sub, parent) -> None:
             '  grokcli image-edit "blend these into one scene" -i a.png -i b.png -a auto'
         ),
     )
-    image_edit.add_argument("prompt", help="how to edit the image(s)")
+    image_edit.add_argument("prompt", help="how to edit the image(s); reference sources as <IMAGE_0>, <IMAGE_1>, ...")
     image_edit.add_argument("-i", "--image", dest="sources", action="append", default=None,
                             help="source image (local path or URL); repeatable, up to 3")
-    image_edit.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-quality)")
+    image_edit.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-2.0)")
     image_edit.add_argument("-a", "--aspect", default=None, help="aspect ratio (default: follow input / auto)")
     image_edit.add_argument("-r", "--resolution", default=None, help="resolution: 1k or 2k (default: model default)")
-    image_edit.add_argument("-n", "--count", type=int, default=1, help="number of variations (default 1)")
+    image_edit.add_argument("-n", "--count", type=int, default=1, help="number of variations, up to 10 (default 1)")
+    image_edit.add_argument("--response-format", default=None, choices=["url", "b64_json"],
+                            help="delivery shape from the API (default url; b64_json saves one round-trip)")
     image_edit.set_defaults(func=_cmd_image_edit)
 
     video_extend = _sub(
@@ -698,7 +703,8 @@ def _cmd_image(args, settings) -> int:
     from .media import image
 
     return image.run_image(
-        settings, prompt=args.prompt, model=args.model, aspect_ratio=args.aspect, resolution=args.resolution, n=args.count
+        settings, prompt=args.prompt, model=args.model, aspect_ratio=args.aspect, resolution=args.resolution,
+        n=args.count, response_format=args.response_format,
     )
 
 
@@ -729,6 +735,7 @@ def _cmd_image_edit(args, settings) -> int:
         aspect_ratio=args.aspect,
         resolution=args.resolution,
         n=args.count,
+        response_format=args.response_format,
     )
 
 

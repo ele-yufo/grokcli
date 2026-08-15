@@ -7,7 +7,7 @@
 | 用途 | 默认模型 | 备注 |
 |------|---------|------|
 | 对话 | `grok-4.5` | 500k 上下文；`--effort` 可调 |
-| 图像 | `grok-imagine-image-quality` | `-r 1k/2k`，7 种宽高比 |
+| 图像 | `grok-imagine-image-2.0` | Imagine Image 2.0；`-r 1k/2k`；13 种宽高比 + `auto`；单次 ≤10 张 |
 | 视频生成 | `grok-imagine-video-1.5` | T2V/I2V/R2V 三合一；T2V/I2V 原生 1080p |
 | 视频编辑/延长 | `grok-imagine-video`（base） | **1.5 不接受这两个端点**（400） |
 | TTS | （无模型 id） | `voice_id` + `language`；无 model 参数 |
@@ -28,8 +28,8 @@
 
 ## 图像
 
-- `image`：生成（默认 `grok-imagine-image-quality`）；`image-edit`：按提示改源图（默认 **quality** 模型，`-m grok-imagine-image` 可回退 fast），1-3 张源图（本地路径或 URL）。
-- 源图上限按模型表驱动（`models.image_edit_max_sources`）：当前 API 全部 3 张；**Imagine Image 2.0**（2026-08-07 发布，消费端 Quality Mode，API 未上线）公布模型 id 后注册为 5 张 multi-ref——届时 CLI 零改动生效。
+- `image` 生成与 `image-edit` 编辑默认都是 **`grok-imagine-image-2.0`**（2026-08-07 发布，8 月中旬上线 API；文字排版与提示遵循强项）。`-m grok-imagine-image-quality` / `-m grok-imagine-image` 可切回旧档。
+- 源图上限按模型表驱动（`models.image_edit_max_sources`）：API 文档对所有现役模型（含 2.0）均为 **3 张**；多参考编辑在提示词里用 `<IMAGE_0>`、`<IMAGE_1>` 指位。宽幅比例（`9:19.5`、`19.5:9`、`9:20`、`20:9`、`1:2`、`2:1`）与 `auto` 已开放；`--response-format b64_json` 可省一次下载往返。
 - 输出 `./grokcli-output/<时间戳>_<slug>.png`（当前工作目录下），路径打印在 stdout。
 
 ## 语音

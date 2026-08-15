@@ -146,6 +146,15 @@ grokcli help [command]                                            完整手册�
 
 每个命令的详细参数和示例，`grokcli <命令> --help` 都有。
 
+### 图片模型
+
+`grok-imagine-image-2.0` 是 `image` 与 `image-edit` 的默认模型 —— Imagine Image
+2.0：文字排版锐利、提示遵循度高、支持多参考图编辑（在提示词中用 `<IMAGE_0>`、
+`<IMAGE_1>`、`<IMAGE_2>` 标记源图）。旧档位随时可用 `-m` 切回：
+`grok-imagine-image-quality`（更慢、更高保真）与 `grok-imagine-image`（快速）。
+生成与编辑单次最多 10 张，支持宽幅/手机比例 —— `9:19.5`、`19.5:9`、`9:20`、
+`20:9`、`1:2`、`2:1`，以及 `auto`。
+
 ### 视频模式
 
 | 模式 | 参数 | 使用的模型 |

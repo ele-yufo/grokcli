@@ -29,20 +29,19 @@ CHAT_MODELS: FrozenSet[str] = frozenset(
 REASONING_EFFORTS: FrozenSet[str] = frozenset({"none", "low", "medium", "high"})
 
 IMAGE_MODELS: Dict[str, str] = {
-    "grok-imagine-image": "Fast image generation (~5-10s)",
+    # Imagine Image 2.0 (2026-08-07) — live in the API since 2026-08; the
+    # docs recommend it and it undercuts the old quality tier ($0.04 vs
+    # $0.05/image). Strong instruction-following and typography.
+    "grok-imagine-image-2.0": "Imagine Image 2.0 — recommended; sharp text, strong prompt adherence",
     "grok-imagine-image-quality": "Higher fidelity (~10-20s)",
+    "grok-imagine-image": "Fast image generation (~5-10s)",
 }
 
-# Next-gen image model — Grok "Imagine Image 2.0" (announced 2026-08-07,
-# https://x.ai/news/grok-imagine-image-2). It went live on the consumer side
-# as the new Quality Mode (grok.com/imagine, iOS/Android); the announcement
-# said "API access coming soon", and GET /v1/models still has no new image
-# ID. When the ID lands, register it here and in IMAGE_EDIT_MAX_SOURCES
-# (2.0 advertises multi-reference editing with up to 5 source images), then
-# re-evaluate DEFAULT_IMAGE_MODEL / DEFAULT_EDIT_MODEL in media/image.py.
-IMAGE_EDIT_MAX_SOURCES: Dict[str, int] = {
-    # All current models accept 3. Imagine Image 2.0 → 5 (API pending).
-}
+# Per-model source-image caps for POST /images/edits. The API guide documents
+# "up to 3 source images in a single request" for every current model,
+# including 2.0 (its consumer-app "5 inputs" multi-reference editing is not
+# exposed via the API). Unknown models stay permissive via the default.
+IMAGE_EDIT_MAX_SOURCES: Dict[str, int] = {}
 MAX_EDIT_SOURCES = 3
 
 
@@ -59,7 +58,18 @@ VIDEO_MODELS: Dict[str, str] = {
 ASPECT_RATIOS: FrozenSet[str] = frozenset(
     {"1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"}
 )
+
+# Image generation accepts a wider set (docs 2026-08), including phone-full-
+# screen ratios and "auto" (model picks). Video keeps the classic 7 above.
+IMAGE_ASPECT_RATIOS: FrozenSet[str] = ASPECT_RATIOS | frozenset(
+    {"9:19.5", "19.5:9", "9:20", "20:9", "1:2", "2:1", "auto"}
+)
 IMAGE_RESOLUTIONS: FrozenSet[str] = frozenset({"1k", "2k"})
+# Docs guide: "up to 10 images per request" (generation and edits).
+IMAGE_COUNT_MAX = 10
+# response_format picks the delivery shape: a short-lived URL (default) or
+# inline base64 (one round-trip, no follow-up download).
+RESPONSE_FORMATS: FrozenSet[str] = frozenset({"url", "b64_json"})
 VIDEO_RESOLUTIONS: FrozenSet[str] = frozenset({"480p", "720p", "1080p"})
 
 VIDEO_DURATION_MIN = 1

@@ -277,6 +277,72 @@ class ImageValidationTest(unittest.TestCase):
                     client, prompt="x", model="m", aspect_ratio="1:1", resolution="9k", n=1, output_dir=Path(tmp)
                 )
 
+    def test_invalid_aspect_ratio_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            with self.assertRaises(UsageError):
+                image.generate_images(
+                    client, prompt="x", model="m", aspect_ratio="5:4", resolution="2k", n=1, output_dir=Path(tmp)
+                )
+
+    def test_wide_and_auto_aspect_ratios_accepted(self):
+        # Imagine Image 2.0 era (docs 2026-08): phone-full-screen ratios and
+        # "auto" are valid for image generation/editing (not for video).
+        for ratio in ("9:19.5", "19.5:9", "9:20", "20:9", "1:2", "2:1", "auto"):
+            self.assertIn(ratio, models.IMAGE_ASPECT_RATIOS)
+            self.assertNotIn(ratio, models.ASPECT_RATIOS)
+
+    def test_count_above_ten_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            with self.assertRaises(UsageError):
+                image.generate_images(
+                    client, prompt="x", model="m", aspect_ratio="1:1", resolution="2k", n=11, output_dir=Path(tmp)
+                )
+
+    def test_response_format_passthrough_and_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+            image.generate_images(
+                client, prompt="x", model="grok-imagine-image-2.0", aspect_ratio="1:1", resolution="2k",
+                n=1, output_dir=Path(tmp), response_format="b64_json",
+            )
+            body = client.request_json.call_args.kwargs["json_body"]
+            self.assertEqual(body["response_format"], "b64_json")
+            with self.assertRaises(UsageError):
+                image.generate_images(
+                    client, prompt="x", model="m", aspect_ratio="1:1", resolution="2k", n=1,
+                    output_dir=Path(tmp), response_format="jpeg",
+                )
+
+    def test_defaults_use_imagine_image_2(self):
+        self.assertIn("grok-imagine-image-2.0", models.IMAGE_MODELS)
+        self.assertEqual(image.DEFAULT_EDIT_MODEL, "grok-imagine-image-2.0")
+
+    def test_mime_type_drives_extension(self):
+        # Imagine Image 2.0 returns image/jpeg; the saved file must not lie
+        # about its format (was: hardcoded .png).
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(
+                return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode(), "mime_type": "image/jpeg"}]}
+            )
+            paths = image.generate_images(
+                client, prompt="fox", model="grok-imagine-image-2.0", aspect_ratio="1:1",
+                resolution="2k", n=1, output_dir=Path(tmp),
+            )
+            self.assertTrue(paths[0].name.endswith(".jpg"), paths[0].name)
+
+    def test_missing_mime_type_falls_back_to_png(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+            paths = image.generate_images(
+                client, prompt="fox", model="m", aspect_ratio="1:1", resolution="2k", n=1, output_dir=Path(tmp),
+            )
+            self.assertTrue(paths[0].name.endswith(".png"), paths[0].name)
+
 
 class ImageEditTest(unittest.TestCase):
     def test_edit_sends_images_and_saves(self):
@@ -292,7 +358,9 @@ class ImageEditTest(unittest.TestCase):
             self.assertEqual(paths[0].read_bytes(), b"OUT")
             body = client.request_json.call_args.kwargs["json_body"]
             self.assertEqual(client.request_json.call_args.args, ("POST", "/images/edits"))
-            self.assertTrue(body["images"][0]["image_url"].startswith("data:image/png;base64,"))
+            # Canonical field is ``url`` (docs 2026-08); ``image_url`` is the
+            # legacy alias.
+            self.assertTrue(body["images"][0]["url"].startswith("data:image/png;base64,"))
 
     def test_edit_requires_a_source(self):
         client = _client("/tmp")
@@ -305,9 +373,10 @@ class ImageEditTest(unittest.TestCase):
             image.edit_image(client, prompt="x", sources=["a", "b", "c", "d"], model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
 
     def test_edit_limit_is_per_model(self):
-        # Default cap is 3; a registered model can raise it (Imagine Image 2.0
-        # advertises multi-reference editing with up to 5).
+        # Default cap is 3 — the API guide documents "up to 3 source images"
+        # for every current model, including Imagine Image 2.0.
         self.assertEqual(models.image_edit_max_sources("unknown-model"), 3)
+        self.assertEqual(models.image_edit_max_sources("grok-imagine-image-2.0"), 3)
         with self.assertRaises(UsageError):
             image.edit_image(_client("/tmp"), prompt="x", sources=["a"] * 4, model="m",
                              aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
@@ -325,7 +394,7 @@ class ImageEditTest(unittest.TestCase):
             client.request_json = mock.Mock(return_value={"data": [{"url": "https://img/e.png"}]})
             client.download = mock.Mock(side_effect=lambda url, path, **k: path)
             image.edit_image(client, prompt="x", sources=["https://in/a.png"], model="m", aspect_ratio="auto", resolution=None, n=1, output_dir=Path(tmp))
-            self.assertEqual(client.request_json.call_args.kwargs["json_body"]["images"][0]["image_url"], "https://in/a.png")
+            self.assertEqual(client.request_json.call_args.kwargs["json_body"]["images"][0]["url"], "https://in/a.png")
 
 
 class VideoReferenceAndExtendTest(unittest.TestCase):
