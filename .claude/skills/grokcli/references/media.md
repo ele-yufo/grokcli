@@ -28,9 +28,9 @@
 
 ## 图像
 
-- `image` 生成与 `image-edit` 编辑默认都是 **`grok-imagine-image-2.0`**（2026-08-07 发布，8 月中旬上线 API；文字排版与提示遵循强项）。`-m grok-imagine-image-quality` / `-m grok-imagine-image` 可切回旧档。
+- `image` 生成与 `image-edit` 编辑默认都是 **`grok-imagine-image-2.0`**（Imagine Image 2.0：文字排版锐利、提示遵循度高）。`-m grok-imagine-image-quality` / `-m grok-imagine-image` 可切其他档位。
 - 源图上限按模型表驱动（`models.image_edit_max_sources`）：API 文档对所有现役模型（含 2.0）均为 **3 张**；多参考编辑在提示词里用 `<IMAGE_0>`、`<IMAGE_1>` 指位。宽幅比例（`9:19.5`、`19.5:9`、`9:20`、`20:9`、`1:2`、`2:1`）与 `auto` 已开放；`--response-format b64_json` 可省一次下载往返。
-- 输出 `./grokcli-output/<时间戳>_<slug>.png`（当前工作目录下），路径打印在 stdout。
+- 输出 `./grokcli-output/<时间戳>_<slug>.<png|jpg>`（扩展名跟 API 返回的 mime_type；2.0 默认 JPEG），路径打印在 stdout。
 
 ## 语音
 
