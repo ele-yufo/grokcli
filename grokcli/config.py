@@ -20,10 +20,10 @@ from urllib.parse import urlparse
 from . import fsutil
 
 DEFAULT_BASE_URL = "https://api.x.ai/v1"
-# grok-4.5 is the flagship chat model (500k context, reasoning effort tuning);
+# grok-4.6 is the flagship chat model (500k context, reasoning effort tuning);
 # grok-imagine-image-2.0 is the recommended image model (docs 2026-08);
 # grok-imagine-video-1.5 is the unified T2V/I2V/R2V video model.
-DEFAULT_CHAT_MODEL = "grok-4.5"
+DEFAULT_CHAT_MODEL = "grok-4.6"
 DEFAULT_IMAGE_MODEL = "grok-imagine-image-2.0"
 DEFAULT_VIDEO_MODEL = "grok-imagine-video-1.5"
 # TTS/STT have no public model IDs; these sentinel defaults are accepted for

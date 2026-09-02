@@ -225,7 +225,7 @@ def _add_chat_commands(sub, parent) -> None:
     chat.add_argument("-c", "--continue", dest="continue_session", action="store_true", help="continue the most recent conversation")
     chat.add_argument("--session", default=None, help="continue/create a named session")
     chat.add_argument("--new", action="store_true", help="start a fresh session (ignore -c)")
-    chat.add_argument("--effort", default=None, help="reasoning effort: none, low, medium, high (default: model default)")
+    chat.add_argument("--effort", default=None, help="reasoning effort: low, medium, high (grok-4.6 rejects none)")
     chat.add_argument("--priority", action="store_true", help="request priority processing (service_tier)")
     chat.set_defaults(func=_cmd_chat)
 
@@ -248,7 +248,7 @@ def _add_chat_commands(sub, parent) -> None:
     search.add_argument("--no-web", action="store_true", help="disable web search")
     search.add_argument("--no-x", action="store_true", help="disable X search")
     search.add_argument("--no-stream", action="store_true", help="wait for the full reply")
-    search.add_argument("--effort", default=None, help="reasoning effort: none, low, medium, high (default: model default)")
+    search.add_argument("--effort", default=None, help="reasoning effort: low, medium, high (grok-4.6 rejects none)")
     search.set_defaults(func=_cmd_search)
 
 
@@ -551,7 +551,7 @@ def _add_config_command(sub, parent) -> None:
             "EXAMPLES:\n"
             "  grokcli config show\n"
             "  grokcli config get chat_model\n"
-            "  grokcli config set chat_model grok-4.3\n"
+            "  grokcli config set chat_model grok-4.6\n"
             "  grokcli config set output_dir ~/Pictures/grok\n"
             "  grokcli config path"
         ),
@@ -570,7 +570,7 @@ def _add_config_command(sub, parent) -> None:
     get_p.set_defaults(func=_cmd_config_get)
     set_p = _sub(cfg_sub, "set", parent, help_text="write one config value",
                  description=f"Set one saved config value. Keys: {keys}.",
-                 epilog="EXAMPLES:\n  grokcli config set chat_model grok-4.3")
+                 epilog="EXAMPLES:\n  grokcli config set chat_model grok-4.6")
     set_p.add_argument("key")
     set_p.add_argument("value")
     set_p.set_defaults(func=_cmd_config_set)

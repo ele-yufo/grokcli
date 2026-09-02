@@ -123,7 +123,7 @@ grokcli status                                                    login status &
 grokcli doctor [--offline]                                        health check
 
 grokcli chat [PROMPT] [-m MODEL] [-s SYSTEM] [--no-stream] [--web] [--x]
-             [--effort none|low|medium|high] [--priority] [-c] [--session NAME] [--new]
+             [--effort low|medium|high] [--priority] [-c] [--session NAME] [--new]
                                                                   one-shot, stdin ('-'), or a REPL; resumable
 grokcli search QUERY [--no-web] [--no-x]                          X + web search, answered with citations
 grokcli sessions list | show [id] | clear [id|--all]              manage saved conversations
@@ -188,7 +188,7 @@ Resolution order for every setting: **CLI flag > environment variable > `~/.conf
 | Disable color | `NO_COLOR` | color on a TTY |
 
 ```bash
-grokcli config set chat_model grok-4.5
+grokcli config set chat_model grok-4.6
 grokcli config set output_dir ~/Pictures/grok
 ```
 

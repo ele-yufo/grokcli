@@ -6,7 +6,7 @@
 
 | 用途 | 默认模型 | 备注 |
 |------|---------|------|
-| 对话 | `grok-4.5` | 500k 上下文；`--effort` 可调 |
+| 对话 | `grok-4.6` | 500k 上下文；`--effort` 可调（不接受 `none`） |
 | 图像 | `grok-imagine-image-2.0` | Imagine Image 2.0；`-r 1k/2k`；13 种宽高比 + `auto`；单次 ≤10 张 |
 | 视频生成 | `grok-imagine-video-1.5` | T2V/I2V/R2V 三合一；T2V/I2V 原生 1080p |
 | 视频编辑/延长 | `grok-imagine-video`（base） | **1.5 不接受这两个端点**（400） |

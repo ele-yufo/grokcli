@@ -120,7 +120,7 @@ grokcli status                                                    登录状态�
 grokcli doctor [--offline]                                        健康检查
 
 grokcli chat [PROMPT] [-m MODEL] [-s SYSTEM] [--no-stream] [--web] [--x]
-             [--effort none|low|medium|high] [--priority] [-c] [--session NAME] [--new]
+             [--effort low|medium|high] [--priority] [-c] [--session NAME] [--new]
                                                                   一次性 / stdin（'-'）/ REPL；可续接
 grokcli search QUERY [--no-web] [--no-x]                          X + 网页搜索，带引用作答
 grokcli sessions list | show [id] | clear [id|--all]              管理已存对话
@@ -184,7 +184,7 @@ grokcli help [command]                                            完整手册�
 | 关闭彩色 | `NO_COLOR` | TTY 下彩色 |
 
 ```bash
-grokcli config set chat_model grok-4.5
+grokcli config set chat_model grok-4.6
 grokcli config set output_dir ~/Pictures/grok
 ```
 
