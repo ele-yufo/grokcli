@@ -37,6 +37,10 @@ class GrokClient:
         return {"Authorization": f"{creds['token_type']} {creds['access_token']}"}
 
     def _url(self, path: str) -> str:
+        # Absolute URLs pass through for hardcoded service constants (e.g. the
+        # billing proxy) — never user input, so the base_url pin stays intact.
+        if path.startswith(("http://", "https://")):
+            return path
         return self.settings.base_url.rstrip("/") + "/" + path.lstrip("/")
 
     # -- requests -----------------------------------------------------------

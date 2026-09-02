@@ -128,6 +128,7 @@ grokcli chat [PROMPT] [-m MODEL] [-s SYSTEM] [--no-stream] [--web] [--x]
 grokcli search QUERY [--no-web] [--no-x]                          X + web search, answered with citations
 grokcli sessions list | show [id] | clear [id|--all]              manage saved conversations
 grokcli models                                                    list available models
+grokcli quota                                                     subscription usage & reset time
 
 grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N]                generate image(s)
 grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT]    edit 1-3 source images by prompt

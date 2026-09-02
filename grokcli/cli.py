@@ -41,8 +41,9 @@ CAPABILITIES:
   video       generate videos (T2V/I2V/R2V)    video-edit  edit a video
   video-extend  extend a video          tts         text-to-speech
   voice       clone / list / delete custom voices   transcribe  speech-to-text
-  models      list available models     voices      list TTS voices
-  sessions    manage saved chats        config      view/change saved defaults
+  models      list available models     quota       show subscription usage
+  voices      list TTS voices           sessions    manage saved chats
+  config      view/change saved defaults
   status      show login state          doctor      health check     logout  sign out
 
 OUTPUT CONTRACT (stable for scripting):
@@ -92,6 +93,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_media_commands(sub, globals_parent)
     _add_sessions_command(sub, globals_parent)
     _add_models_command(sub, globals_parent)
+    _add_quota_command(sub, globals_parent)
     _add_config_command(sub, globals_parent)
     _add_help_command(sub, globals_parent)
     return parser
@@ -521,6 +523,20 @@ def _add_models_command(sub, parent) -> None:
     models.set_defaults(func=_cmd_models)
 
 
+def _add_quota_command(sub, parent) -> None:
+    quota = _sub(
+        sub, "quota", parent,
+        help_text="show subscription quota usage (credits, reset time)",
+        description=(
+            "Show your subscription's usage period and remaining credits\n"
+            "(the quota surface behind the Grok app's usage meter; weekly for\n"
+            "SuperGrok, with a per-product split when the account reports one)."
+        ),
+        epilog="EXAMPLES:\n  grokcli quota\n  grokcli quota --output json",
+    )
+    quota.set_defaults(func=_cmd_quota)
+
+
 def _add_config_command(sub, parent) -> None:
     keys = "base_url, chat_model, image_model, video_model, tts_model, stt_model, tts_voice, output_dir, timeout, proxy"
     cfg = _sub(
@@ -850,6 +866,12 @@ def _cmd_models(args, settings) -> int:
     ids = _model_ids(data)
     output.emit_result(settings.output_format, data, "\n".join(ids))
     return 0
+
+
+def _cmd_quota(args, settings) -> int:
+    from . import quota
+
+    return quota.run_quota(settings)
 
 
 def _model_ids(data: Any) -> List[str]:

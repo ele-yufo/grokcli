@@ -105,7 +105,7 @@ class HelpAtomicityTest(unittest.TestCase):
             self.assertIn(needle, text, needle)
         # Every command must be discoverable from the top-level help.
         for cmd in ("chat", "search", "image", "image-edit", "video", "video-extend", "video-edit",
-                    "tts", "voices", "voice", "transcribe", "models", "sessions", "config",
+                    "tts", "voices", "voice", "transcribe", "models", "quota", "sessions", "config",
                     "doctor", "status", "logout"):
             self.assertIn(cmd, text, cmd)
 
@@ -114,7 +114,7 @@ class HelpAtomicityTest(unittest.TestCase):
             ["login"], ["logout"], ["status"], ["doctor"], ["chat"], ["search"],
             ["image"], ["image-edit"], ["video"], ["video-extend"], ["video-edit"],
             ["tts"], ["voices"], ["voice", "clone"], ["voice", "list"], ["voice", "delete"],
-            ["transcribe"], ["sessions"], ["models"], ["config"],
+            ["transcribe"], ["sessions"], ["models"], ["quota"], ["config"],
         ]
         for argv in commands:
             text = self._help(argv)
@@ -190,6 +190,11 @@ class MediaDispatchTest(unittest.TestCase):
     def test_voices_dispatch(self):
         with mock.patch("grokcli.media.tts.run_voices", return_value=0) as run:
             self.assertEqual(cli.main(["voices"]), 0)
+        run.assert_called_once()
+
+    def test_quota_dispatch(self):
+        with mock.patch("grokcli.quota.run_quota", return_value=0) as run:
+            self.assertEqual(cli.main(["quota"]), 0)
         run.assert_called_once()
 
     def test_transcribe_dispatch(self):

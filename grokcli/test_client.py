@@ -72,6 +72,11 @@ class GrokClientTest(unittest.TestCase):
         self.assertEqual(client._url("/responses"), "https://api.x.ai/v1/responses")
         self.assertEqual(client._url("responses"), "https://api.x.ai/v1/responses")
 
+    def test_url_absolute_passes_through(self):
+        # Hardcoded service constants (billing proxy) bypass the base URL join.
+        client = GrokClient(self.settings, env={})
+        self.assertEqual(client._url("https://cli-chat-proxy.grok.com/v1/billing"), "https://cli-chat-proxy.grok.com/v1/billing")
+
     def test_stream_refreshes_and_reopens_on_401(self):
         client = GrokClient(self.settings, env={})
         calls = {"n": 0}

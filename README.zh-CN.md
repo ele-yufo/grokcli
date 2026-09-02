@@ -125,6 +125,7 @@ grokcli chat [PROMPT] [-m MODEL] [-s SYSTEM] [--no-stream] [--web] [--x]
 grokcli search QUERY [--no-web] [--no-x]                          X + 网页搜索，带引用作答
 grokcli sessions list | show [id] | clear [id|--all]              管理已存对话
 grokcli models                                                    列出可用模型
+grokcli quota                                                     订阅配额用量与重置时间
 
 grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N]                生成图片
 grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT]    按提示编辑 1-3 张源图

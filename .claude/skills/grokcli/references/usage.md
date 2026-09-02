@@ -23,7 +23,7 @@ grokcli doctor           # 健康检查：凭证、网络、订阅授权（--off
 | 图像 | `image`（生成）、`image-edit`（1-3 张源图按提示编辑） |
 | 视频 | `video`（T2V/I2V/R2V）、`video-extend`（延长）、`video-edit`（编辑） |
 | 语音 | `tts`、`voices`（内置音色）、`voice`（克隆/管理自定义音色）、`transcribe` |
-| 系统 | `models`、`config`、`help`、`status`、`doctor`、`login`、`logout` |
+| 系统 | `models`、`quota`、`config`、`help`、`status`、`doctor`、`login`、`logout` |
 
 ## 脚本化契约
 
@@ -48,5 +48,5 @@ grokcli chat "name 3 colors" --no-stream --output json | jq -r .text
 - 401：token 失效，自动刷新后重试一次；仍 401 则重登。
 - 403：订阅授权缺失（功能级：如 R2V 配音、自定义音色、1080p 配额）。
 - 404：模型 id 不存在或已退役 → `grokcli models` 看 live 列表。
-- 429/4：配额/限流，稍后重试。
+- 429/4：配额/限流，稍后重试；剩余量与重置时间用 `grokcli quota` 查（周配额百分比 + 分产品用量）。
 - 网络类（6）：`--verbose` 看请求详情；检查代理（`HTTPS_PROXY`）。
