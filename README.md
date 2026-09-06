@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="python 3.9+">
   <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="zero dependencies">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
-  <img src="https://img.shields.io/badge/tests-351%20passing-8A2BE2" alt="351 tests passing">
+  <img src="https://img.shields.io/badge/tests-375%20passing-8A2BE2" alt="375 tests passing">
 </p>
 
 ---
@@ -130,8 +130,8 @@ grokcli sessions list | show [id] | clear [id|--all]              manage saved c
 grokcli models                                                    list available models
 grokcli quota                                                     subscription usage & reset time
 
-grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N]                generate image(s)
-grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT]    edit 1-3 source images by prompt
+grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N] [-q QUALITY]   generate image(s)
+grokcli image-edit PROMPT -i SRC [-i SRC2 ...] [-a ASPECT] [-q Q]  edit up to 5 source images by prompt
 grokcli video PROMPT [-i IMG] [--ref IMG ...] [--ref-audio VOICE ...]
              [-r 480p|720p|1080p] [-d 1-15]                       text- / image- / reference-to-video
 grokcli video-extend VIDEO [PROMPT] [-d SECONDS]                  extend an existing video
@@ -154,11 +154,18 @@ Run `grokcli <command> --help` for details and examples on any command.
 
 `grok-imagine-image-2.0` is the default for both `image` and `image-edit` —
 the Imagine Image 2.0 model: sharp typography, strong prompt adherence, and
-multi-reference editing (tag sources in the prompt as `<IMAGE_0>`, `<IMAGE_1>`,
-`<IMAGE_2>`). The older tiers remain one `-m` away: `grok-imagine-image-quality`
-(slower, higher fidelity) and `grok-imagine-image` (fast). Generation and edits
-accept up to 10 images per request and wide/phone aspect ratios — `9:19.5`,
-`19.5:9`, `9:20`, `20:9`, `1:2`, `2:1`, plus `auto`.
+multi-reference editing with **up to 5 source images** (tag them in the prompt
+as `<IMAGE_0>`, `<IMAGE_1>`, …). The older tiers remain one `-m` away:
+`grok-imagine-image-quality` (retires 2026-11-02) and `grok-imagine-image`
+(fast). Generation and edits accept up to 10 outputs per request, `-q
+low|medium|auto` to trade cost against rendering effort (the API's own default
+is `auto` — `low` for generation, `medium` for edits), and wide/phone aspect
+ratios — `21:9`, `5:2`, `9:19.5`, `19.5:9`, `9:20`, `20:9`, `1:2`, `2:1`, plus
+`auto`.
+
+> The **Imagine Agent** (the planning canvas on grok.com/imagine) is a
+> web-only orchestration layer over these same endpoints — it has no API, so
+> grokcli exposes the underlying generation and editing calls directly.
 
 ### 🎬 Video modes
 

@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="python 3.9+">
   <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="零依赖">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT 许可证">
-  <img src="https://img.shields.io/badge/tests-351%20passing-8A2BE2" alt="351 个测试全部通过">
+  <img src="https://img.shields.io/badge/tests-375%20passing-8A2BE2" alt="375 个测试全部通过">
 </p>
 
 ---
@@ -127,8 +127,8 @@ grokcli sessions list | show [id] | clear [id|--all]              管理已存�
 grokcli models                                                    列出可用模型
 grokcli quota                                                     订阅配额用量与重置时间
 
-grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N]                生成图片
-grokcli image-edit PROMPT -i SRC [-i SRC2 -i SRC3] [-a ASPECT]    按提示编辑 1-3 张源图
+grokcli image PROMPT [-a ASPECT] [-r 1k|2k] [-n N] [-q QUALITY]   生成图片
+grokcli image-edit PROMPT -i SRC [-i SRC2 ...] [-a ASPECT] [-q Q]  按提示编辑最多 5 张源图
 grokcli video PROMPT [-i IMG] [--ref IMG ...] [--ref-audio VOICE ...]
              [-r 480p|720p|1080p] [-d 1-15]                       文/图/参考生成视频
 grokcli video-extend VIDEO [PROMPT] [-d SECONDS]                  延长已有视频
@@ -150,11 +150,15 @@ grokcli help [command]                                            完整手册�
 ### 图片模型
 
 `grok-imagine-image-2.0` 是 `image` 与 `image-edit` 的默认模型 —— Imagine Image
-2.0：文字排版锐利、提示遵循度高、支持多参考图编辑（在提示词中用 `<IMAGE_0>`、
-`<IMAGE_1>`、`<IMAGE_2>` 标记源图）。旧档位随时可用 `-m` 切回：
-`grok-imagine-image-quality`（更慢、更高保真）与 `grok-imagine-image`（快速）。
-生成与编辑单次最多 10 张，支持宽幅/手机比例 —— `9:19.5`、`19.5:9`、`9:20`、
-`20:9`、`1:2`、`2:1`，以及 `auto`。
+2.0：文字排版锐利、提示遵循度高、支持多参考图编辑，**单次最多 5 张源图**（在提示词
+中用 `<IMAGE_0>`、`<IMAGE_1>` … 标记）。旧档位随时可用 `-m` 切回：
+`grok-imagine-image-quality`（2026-11-02 下线）与 `grok-imagine-image`（快速）。
+生成与编辑单次最多出 10 张，`-q low|medium|auto` 控制渲染档位（API 默认 `auto`：
+生成走 `low`、编辑走 `medium`），支持宽幅/手机比例 —— `21:9`、`5:2`、`9:19.5`、
+`19.5:9`、`9:20`、`20:9`、`1:2`、`2:1`，以及 `auto`。
+
+> **Imagine Agent**（grok.com/imagine 上的规划画布）是这几个接口之上的一层网页端
+> 编排，没有 API；grokcli 直接调用底层的生成与编辑接口。
 
 ### 视频模式
 

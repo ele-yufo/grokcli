@@ -27,16 +27,17 @@ IMAGE_MODELS: Dict[str, str] = {
     # docs recommend it and it undercuts the old quality tier ($0.04 vs
     # $0.05/image). Strong instruction-following and typography.
     "grok-imagine-image-2.0": "Imagine Image 2.0 — recommended; sharp text, strong prompt adherence",
-    "grok-imagine-image-quality": "Higher fidelity (~10-20s)",
+    # Retiring 2026-11-02: requests are then served by 2.0 with quality=low.
+    "grok-imagine-image-quality": "Higher fidelity (~10-20s) — retires 2026-11-02",
     "grok-imagine-image": "Fast image generation (~5-10s)",
 }
 
-# Per-model source-image caps for POST /images/edits. The API guide documents
-# "up to 3 source images in a single request" for every current model,
-# including 2.0 (its consumer-app "5 inputs" multi-reference editing is not
-# exposed via the API). Unknown models stay permissive via the default.
+# Per-model source-image caps for POST /images/edits. The multi-image editing
+# guide documents "up to five source images for a single image edit" — the API
+# was raised from 3 to 5 on 2026-08-28, matching the consumer app. Unknown
+# models stay permissive via the default.
 IMAGE_EDIT_MAX_SOURCES: Dict[str, int] = {}
-MAX_EDIT_SOURCES = 3
+MAX_EDIT_SOURCES = 5
 
 
 def image_edit_max_sources(model: str) -> int:
@@ -56,9 +57,13 @@ ASPECT_RATIOS: FrozenSet[str] = frozenset(
 # Image generation accepts a wider set (docs 2026-08), including phone-full-
 # screen ratios and "auto" (model picks). Video keeps the classic 7 above.
 IMAGE_ASPECT_RATIOS: FrozenSet[str] = ASPECT_RATIOS | frozenset(
-    {"9:19.5", "19.5:9", "9:20", "20:9", "1:2", "2:1", "auto"}
+    # 21:9 (cinematic) and 5:2 (wide banner) added by the 2026-08 release notes.
+    {"9:19.5", "19.5:9", "9:20", "20:9", "1:2", "2:1", "21:9", "5:2", "auto"}
 )
 IMAGE_RESOLUTIONS: FrozenSet[str] = frozenset({"1k", "2k"})
+# Rendering effort (release notes 2026-08). ``auto`` is the API default and
+# resolves to ``low`` for generation, ``medium`` for editing.
+IMAGE_QUALITIES: FrozenSet[str] = frozenset({"low", "medium", "auto"})
 # Docs guide: "up to 10 images per request" (generation and edits).
 IMAGE_COUNT_MAX = 10
 # response_format picks the delivery shape: a short-lived URL (default) or

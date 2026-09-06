@@ -1,7 +1,8 @@
 """Image generation via ``POST /v1/images/generations`` and edits via
 ``POST /v1/images/edits``.
 
-Request: ``{model, prompt, n, aspect_ratio, resolution, response_format?}``.
+Request: ``{model, prompt, n, aspect_ratio, resolution, quality?,
+response_format?}``.
 The response carries ``data[]`` items with either ``b64_json``/``base64`` or a
 (short-lived) ``url``; both are handled and saved locally. The saved extension
 follows the item's ``mime_type`` (Imagine Image 2.0 returns JPEG, older tiers
@@ -29,6 +30,7 @@ def generate_images(
     resolution: str,
     n: int,
     output_dir: Path,
+    quality: Optional[str] = None,
     response_format: Optional[str] = None,
 ) -> List[Path]:
     """Generate ``n`` images and save them; return the saved paths."""
@@ -38,6 +40,9 @@ def generate_images(
         raise UsageError(f"Invalid resolution {resolution!r}.", hint=f"Choose from: {_sorted(models.IMAGE_RESOLUTIONS)}")
     _check_count(n)
     payload = {"model": model, "prompt": prompt, "n": max(1, n), "aspect_ratio": aspect_ratio, "resolution": resolution}
+    if quality:
+        _check_quality(quality)
+        payload["quality"] = quality
     if response_format:
         _check_response_format(response_format)
         payload["response_format"] = response_format
@@ -63,9 +68,10 @@ def edit_image(
     resolution: Optional[str],
     n: int,
     output_dir: Path,
+    quality: Optional[str] = None,
     response_format: Optional[str] = None,
 ) -> List[Path]:
-    """Edit 1-3 reference images guided by ``prompt`` via ``POST /images/edits``.
+    """Edit up to 5 reference images guided by ``prompt`` via ``POST /images/edits``.
 
     Local source paths are encoded as data URIs; http(s) URLs pass through.
     aspect_ratio/resolution are optional — omitted, the result follows the input.
@@ -94,6 +100,9 @@ def edit_image(
         payload["aspect_ratio"] = aspect_ratio
     if resolution:
         payload["resolution"] = resolution
+    if quality:
+        _check_quality(quality)
+        payload["quality"] = quality
     if response_format:
         _check_response_format(response_format)
         payload["response_format"] = response_format
@@ -138,6 +147,11 @@ def _check_count(n: int) -> None:
         raise UsageError(f"The image API accepts at most {models.IMAGE_COUNT_MAX} images per request.", hint=f"You asked for {n}.")
 
 
+def _check_quality(quality: str) -> None:
+    if quality not in models.IMAGE_QUALITIES:
+        raise UsageError(f"Invalid quality {quality!r}.", hint=f"Choose from: {_sorted(models.IMAGE_QUALITIES)}")
+
+
 def _check_response_format(response_format: str) -> None:
     if response_format not in models.RESPONSE_FORMATS:
         raise UsageError(f"Invalid response format {response_format!r}.", hint=f"Choose from: {_sorted(models.RESPONSE_FORMATS)}")
@@ -151,6 +165,7 @@ def run_image(
     aspect_ratio: str = "1:1",
     resolution: str = "2k",
     n: int = 1,
+    quality: Optional[str] = None,
     response_format: Optional[str] = None,
     env: Optional[Mapping[str, str]] = None,
 ) -> int:
@@ -169,6 +184,7 @@ def run_image(
             resolution=resolution,
             n=n,
             output_dir=settings.output_dir,
+            quality=quality,
             response_format=response_format,
         )
     finally:
@@ -196,6 +212,7 @@ def run_image_edit(
     aspect_ratio: Optional[str] = None,
     resolution: Optional[str] = None,
     n: int = 1,
+    quality: Optional[str] = None,
     response_format: Optional[str] = None,
     env: Optional[Mapping[str, str]] = None,
 ) -> int:
@@ -215,6 +232,7 @@ def run_image_edit(
             resolution=resolution,
             n=n,
             output_dir=settings.output_dir,
+            quality=quality,
             response_format=response_format,
         )
     finally:

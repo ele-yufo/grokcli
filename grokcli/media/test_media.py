@@ -292,6 +292,43 @@ class ImageValidationTest(unittest.TestCase):
             self.assertIn(ratio, models.IMAGE_ASPECT_RATIOS)
             self.assertNotIn(ratio, models.ASPECT_RATIOS)
 
+    def test_cinematic_and_banner_aspect_ratios_accepted(self):
+        # Release notes 2026-08: 21:9 and 5:2 added for generation and editing.
+        for ratio in ("21:9", "5:2"):
+            self.assertIn(ratio, models.IMAGE_ASPECT_RATIOS)
+            self.assertNotIn(ratio, models.ASPECT_RATIOS)
+
+    def test_quality_passthrough_and_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+            image.generate_images(
+                client, prompt="x", model="grok-imagine-image-2.0", aspect_ratio="1:1", resolution="2k",
+                n=1, output_dir=Path(tmp), quality="low",
+            )
+            self.assertEqual(client.request_json.call_args.kwargs["json_body"]["quality"], "low")
+            # Omitted by default — the API's own "auto" applies.
+            image.generate_images(
+                client, prompt="x", model="grok-imagine-image-2.0", aspect_ratio="1:1", resolution="2k",
+                n=1, output_dir=Path(tmp),
+            )
+            self.assertNotIn("quality", client.request_json.call_args.kwargs["json_body"])
+            with self.assertRaises(UsageError):
+                image.generate_images(
+                    client, prompt="x", model="m", aspect_ratio="1:1", resolution="2k", n=1,
+                    output_dir=Path(tmp), quality="ultra",
+                )
+
+    def test_edit_quality_passthrough(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = _client(tmp)
+            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+            image.edit_image(
+                client, prompt="x", sources=["https://in/a.png"], model="grok-imagine-image-2.0",
+                aspect_ratio=None, resolution=None, n=1, output_dir=Path(tmp), quality="medium",
+            )
+            self.assertEqual(client.request_json.call_args.kwargs["json_body"]["quality"], "medium")
+
     def test_count_above_ten_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = _client(tmp)
@@ -367,26 +404,28 @@ class ImageEditTest(unittest.TestCase):
         with self.assertRaises(UsageError):
             image.edit_image(client, prompt="x", sources=[], model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
 
-    def test_edit_rejects_more_than_three(self):
+    def test_edit_rejects_more_than_five(self):
         client = _client("/tmp")
         with self.assertRaises(UsageError):
-            image.edit_image(client, prompt="x", sources=["a", "b", "c", "d"], model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+            image.edit_image(client, prompt="x", sources=["a"] * 6, model="m", aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
 
     def test_edit_limit_is_per_model(self):
-        # Default cap is 3 — the API guide documents "up to 3 source images"
-        # for every current model, including Imagine Image 2.0.
-        self.assertEqual(models.image_edit_max_sources("unknown-model"), 3)
-        self.assertEqual(models.image_edit_max_sources("grok-imagine-image-2.0"), 3)
-        with self.assertRaises(UsageError):
-            image.edit_image(_client("/tmp"), prompt="x", sources=["a"] * 4, model="m",
-                             aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
-        with mock.patch.dict(models.IMAGE_EDIT_MAX_SOURCES, {"grok-imagine-image-2": 5}):
-            self.assertEqual(models.image_edit_max_sources("grok-imagine-image-2"), 5)
-            client = _client("/tmp")
-            client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
-            image.edit_image(client, prompt="x", sources=["a"] * 5, model="grok-imagine-image-2",
-                             aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
-            self.assertEqual(len(client.request_json.call_args.kwargs["json_body"]["images"]), 5)
+        # Default cap is 5 — the multi-image editing guide documents "up to
+        # five source images for a single image edit" (API raised 3 -> 5 on
+        # 2026-08-28).
+        self.assertEqual(models.image_edit_max_sources("unknown-model"), 5)
+        self.assertEqual(models.image_edit_max_sources("grok-imagine-image-2.0"), 5)
+        client = _client("/tmp")
+        client.request_json = mock.Mock(return_value={"data": [{"b64_json": base64.b64encode(b"OUT").decode()}]})
+        image.edit_image(client, prompt="x", sources=["a"] * 5, model="grok-imagine-image-2.0",
+                         aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
+        self.assertEqual(len(client.request_json.call_args.kwargs["json_body"]["images"]), 5)
+        # A model with a tighter documented cap still wins over the default.
+        with mock.patch.dict(models.IMAGE_EDIT_MAX_SOURCES, {"legacy-model": 3}):
+            self.assertEqual(models.image_edit_max_sources("legacy-model"), 3)
+            with self.assertRaises(UsageError):
+                image.edit_image(_client("/tmp"), prompt="x", sources=["a"] * 4, model="legacy-model",
+                                 aspect_ratio=None, resolution=None, n=1, output_dir=Path("/tmp"))
 
     def test_url_source_passes_through(self):
         with tempfile.TemporaryDirectory() as tmp:

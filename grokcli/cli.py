@@ -258,7 +258,8 @@ def _add_media_commands(sub, parent) -> None:
         help_text="generate image(s) from a text prompt",
         description=(
             "Generate one or more images and save them to ./grokcli-output/ (paths printed\n"
-            "to stdout). Aspect ratios: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3. Resolution: 1k or 2k."
+            "to stdout). Aspect ratios: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, plus wide/phone\n"
+            "ratios and 'auto'. Resolution: 1k or 2k. Quality: low/medium/auto."
         ),
         epilog=(
             "EXAMPLES:\n"
@@ -269,9 +270,11 @@ def _add_media_commands(sub, parent) -> None:
     image.add_argument("prompt", help="image description")
     image.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-2.0)")
     image.add_argument("-a", "--aspect", default="1:1",
-                       help="aspect ratio: 1:1 16:9 9:16 4:3 3:4 3:2 2:3 9:19.5 19.5:9 9:20 20:9 1:2 2:1 auto (default 1:1)")
+                       help="aspect ratio: 1:1 16:9 9:16 4:3 3:4 3:2 2:3 21:9 5:2 9:19.5 19.5:9 9:20 20:9 1:2 2:1 auto (default 1:1)")
     image.add_argument("-r", "--resolution", default="2k", help="resolution: 1k or 2k (default 2k)")
     image.add_argument("-n", "--count", type=int, default=1, help="number of images, up to 10 (default 1)")
+    image.add_argument("-q", "--quality", default=None, choices=["low", "medium", "auto"],
+                       help="rendering effort (API default auto = low for generation)")
     image.add_argument("--response-format", default=None, choices=["url", "b64_json"],
                        help="delivery shape from the API (default url; b64_json saves one round-trip)")
     image.set_defaults(func=_cmd_image)
@@ -315,7 +318,7 @@ def _add_media_commands(sub, parent) -> None:
         sub, "image-edit", parent,
         help_text="edit existing image(s) with a prompt",
         description=(
-            "Edit 1-3 source images guided by a text prompt (POST /images/edits); the result\n"
+            "Edit up to 5 source images guided by a text prompt (POST /images/edits); the result\n"
             "is saved to ./grokcli-output/. Aspect ratio is optional (defaults to the input's,\n"
             "or 'auto' for multi-image edits). Use `image` instead for text-only generation."
         ),
@@ -327,11 +330,13 @@ def _add_media_commands(sub, parent) -> None:
     )
     image_edit.add_argument("prompt", help="how to edit the image(s); reference sources as <IMAGE_0>, <IMAGE_1>, ...")
     image_edit.add_argument("-i", "--image", dest="sources", action="append", default=None,
-                            help="source image (local path or URL); repeatable, up to 3")
+                            help="source image (local path or URL); repeatable, up to 5")
     image_edit.add_argument("-m", "--model", default=None, help="image model (default grok-imagine-image-2.0)")
     image_edit.add_argument("-a", "--aspect", default=None, help="aspect ratio (default: follow input / auto)")
     image_edit.add_argument("-r", "--resolution", default=None, help="resolution: 1k or 2k (default: model default)")
     image_edit.add_argument("-n", "--count", type=int, default=1, help="number of variations, up to 10 (default 1)")
+    image_edit.add_argument("-q", "--quality", default=None, choices=["low", "medium", "auto"],
+                            help="rendering effort (API default auto = medium for edits)")
     image_edit.add_argument("--response-format", default=None, choices=["url", "b64_json"],
                             help="delivery shape from the API (default url; b64_json saves one round-trip)")
     image_edit.set_defaults(func=_cmd_image_edit)
@@ -720,7 +725,7 @@ def _cmd_image(args, settings) -> int:
 
     return image.run_image(
         settings, prompt=args.prompt, model=args.model, aspect_ratio=args.aspect, resolution=args.resolution,
-        n=args.count, response_format=args.response_format,
+        n=args.count, quality=args.quality, response_format=args.response_format,
     )
 
 
@@ -751,6 +756,7 @@ def _cmd_image_edit(args, settings) -> int:
         aspect_ratio=args.aspect,
         resolution=args.resolution,
         n=args.count,
+        quality=args.quality,
         response_format=args.response_format,
     )
 
